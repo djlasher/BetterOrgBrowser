@@ -8,7 +8,8 @@ export class MetadataNode extends vscode.TreeItem {
         public readonly metadataType?: string,
         public readonly apiName?: string,
         public readonly parentApiName?: string,
-        public readonly fieldDetails?: SObjectField
+        public readonly fieldDetails?: SObjectField,
+        public readonly packageXmlType?: string
     ) {
         super(label, collapsibleState);
 
