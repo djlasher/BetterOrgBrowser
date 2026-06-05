@@ -1,11 +1,15 @@
 import * as vscode from 'vscode';
 import { MetadataNode } from './metadataNode';
+import { MetadataListItem, OrgService } from '../salesforce/orgService';
 
 export class MetadataProvider implements vscode.TreeDataProvider<MetadataNode> {
     private readonly _onDidChangeTreeData: vscode.EventEmitter<MetadataNode | undefined | void> =
         new vscode.EventEmitter<MetadataNode | undefined | void>();
 
+    private readonly orgService = new OrgService();
+
     private selectedOrgName: string | undefined;
+    private selectedOrgTarget: string | undefined;
 
     readonly onDidChangeTreeData: vscode.Event<MetadataNode | undefined | void> =
         this._onDidChangeTreeData.event;
@@ -14,8 +18,9 @@ export class MetadataProvider implements vscode.TreeDataProvider<MetadataNode> {
         this._onDidChangeTreeData.fire();
     }
 
-    setSelectedOrg(orgName: string | undefined): void {
+    setSelectedOrg(orgName: string | undefined, orgTarget: string | undefined): void {
         this.selectedOrgName = orgName;
+        this.selectedOrgTarget = orgTarget;
         this.refresh();
     }
 
@@ -23,7 +28,7 @@ export class MetadataProvider implements vscode.TreeDataProvider<MetadataNode> {
         return element;
     }
 
-    getChildren(element?: MetadataNode): Thenable<MetadataNode[]> {
+    async getChildren(element?: MetadataNode): Promise<MetadataNode[]> {
         if (!element) {
             const rootNodes: MetadataNode[] = [];
 
@@ -60,12 +65,12 @@ export class MetadataProvider implements vscode.TreeDataProvider<MetadataNode> {
                 )
             );
 
-            return Promise.resolve(rootNodes);
+            return rootNodes;
         }
 
         switch (element.label) {
             case 'Custom Objects':
-                return Promise.resolve([
+                return [
                     new MetadataNode(
                         'Account',
                         vscode.TreeItemCollapsibleState.Collapsed,
@@ -76,10 +81,45 @@ export class MetadataProvider implements vscode.TreeDataProvider<MetadataNode> {
                         vscode.TreeItemCollapsibleState.Collapsed,
                         'CustomObject'
                     )
-                ]);
+                ];
+
+            case 'Apex Classes':
+                if (!this.selectedOrgTarget) {
+                    return [
+                        new MetadataNode(
+                            'Select a Salesforce org first',
+                            vscode.TreeItemCollapsibleState.None,
+                            'Info'
+                        )
+                    ];
+                }
+
+                try {
+                    const apexClasses = await this.orgService.listApexClasses(this.selectedOrgTarget);
+
+                    return apexClasses.map((apexClass: MetadataListItem) =>
+                        new MetadataNode(
+                            apexClass.fullName,
+                            vscode.TreeItemCollapsibleState.None,
+                            apexClass.type ?? 'ApexClass'
+                        )
+                    );
+                } catch (error) {
+                    const message = error instanceof Error
+                        ? error.message
+                        : 'Unknown Apex metadata error';
+
+                    return [
+                        new MetadataNode(
+                            `Error: ${message}`,
+                            vscode.TreeItemCollapsibleState.None,
+                            'Error'
+                        )
+                    ];
+                }
 
             case 'Account':
-                return Promise.resolve([
+                return [
                     new MetadataNode(
                         'Fields',
                         vscode.TreeItemCollapsibleState.Collapsed,
@@ -90,10 +130,10 @@ export class MetadataProvider implements vscode.TreeDataProvider<MetadataNode> {
                         vscode.TreeItemCollapsibleState.None,
                         'ValidationRule'
                     )
-                ]);
+                ];
 
             case 'Fields':
-                return Promise.resolve([
+                return [
                     new MetadataNode(
                         'AccountNumber',
                         vscode.TreeItemCollapsibleState.None,
@@ -104,10 +144,10 @@ export class MetadataProvider implements vscode.TreeDataProvider<MetadataNode> {
                         vscode.TreeItemCollapsibleState.None,
                         'CustomField'
                     )
-                ]);
+                ];
 
             default:
-                return Promise.resolve([]);
+                return [];
         }
     }
 }
