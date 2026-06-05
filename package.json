@@ -12,7 +12,8 @@
   ],
   "activationEvents": [
     "onView:betterOrgBrowserView",
-    "onCommand:betterOrgBrowser.selectOrg"
+    "onCommand:betterOrgBrowser.selectOrg",
+    "onCommand:betterOrgBrowser.showFieldDetails"
   ],
   "main": "./out/extension.js",
   "contributes": {
@@ -41,8 +42,21 @@
       {
         "command": "betterOrgBrowser.selectOrg",
         "title": "Better Org Browser: Select Salesforce Org"
+      },
+      {
+        "command": "betterOrgBrowser.showFieldDetails",
+        "title": "Better Org Browser: Show Field Details"
       }
-    ]
+    ],
+    "menus": {
+      "view/item/context": [
+        {
+          "command": "betterOrgBrowser.showFieldDetails",
+          "when": "view == betterOrgBrowserView && viewItem == string",
+          "group": "inline"
+        }
+      ]
+    }
   },
   "scripts": {
     "compile": "tsc -p ./",
