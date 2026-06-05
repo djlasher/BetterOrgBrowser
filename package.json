@@ -20,7 +20,7 @@
         {
           "id": "betterOrgBrowser",
           "title": "Better Org Browser",
-          "icon": "media/icon.svg"
+          "icon": "$(database)"
         }
       ]
     },
