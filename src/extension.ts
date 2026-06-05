@@ -89,7 +89,29 @@ export function activate(context: vscode.ExtensionContext): void {
         }
     );
 
-    context.subscriptions.push(refreshCommand, selectOrgCommand, showFieldDetailsCommand);
+    const copyApiNameCommand = vscode.commands.registerCommand(
+        'betterOrgBrowser.copyApiName',
+        async (node: MetadataNode) => {
+            if (!node) {
+                vscode.window.showWarningMessage('No metadata item selected.');
+                return;
+            }
+
+            const value = node.parentApiName && node.apiName
+                ? `${node.parentApiName}.${node.apiName}`
+                : node.apiName ?? node.label;
+
+            await vscode.env.clipboard.writeText(value);
+            vscode.window.showInformationMessage(`Copied ${value}`);
+        }
+    );
+
+    context.subscriptions.push(
+        refreshCommand,
+        selectOrgCommand,
+        showFieldDetailsCommand,
+        copyApiNameCommand
+    );
 
     console.log('Better Org Browser activated.');
 }
