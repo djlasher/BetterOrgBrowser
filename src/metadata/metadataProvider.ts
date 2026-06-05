@@ -135,7 +135,8 @@ export class MetadataProvider implements vscode.TreeDataProvider<MetadataNode> {
                     vscode.TreeItemCollapsibleState.None,
                     field.type ?? 'Field',
                     field.name,
-                    objectApiName
+                    objectApiName,
+                    field
                 )
             );
         } catch (error) {
