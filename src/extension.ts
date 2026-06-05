@@ -47,8 +47,10 @@ export function activate(context: vscode.ExtensionContext): void {
                     return;
                 }
 
-                provider.setSelectedOrg(selected.label);
-
+                provider.setSelectedOrg(
+                    selected.label,
+                    orgService.getOrgTargetName(selected.org)
+                );
                 vscode.window.showInformationMessage(
                     `Connected to ${selected.label}`
                 );
