@@ -5,11 +5,18 @@ export class MetadataProvider implements vscode.TreeDataProvider<MetadataNode> {
     private readonly _onDidChangeTreeData: vscode.EventEmitter<MetadataNode | undefined | void> =
         new vscode.EventEmitter<MetadataNode | undefined | void>();
 
+    private selectedOrgName: string | undefined;
+
     readonly onDidChangeTreeData: vscode.Event<MetadataNode | undefined | void> =
         this._onDidChangeTreeData.event;
 
     refresh(): void {
         this._onDidChangeTreeData.fire();
+    }
+
+    setSelectedOrg(orgName: string | undefined): void {
+        this.selectedOrgName = orgName;
+        this.refresh();
     }
 
     getTreeItem(element: MetadataNode): vscode.TreeItem {
@@ -18,7 +25,19 @@ export class MetadataProvider implements vscode.TreeDataProvider<MetadataNode> {
 
     getChildren(element?: MetadataNode): Thenable<MetadataNode[]> {
         if (!element) {
-            return Promise.resolve([
+            const rootNodes: MetadataNode[] = [];
+
+            if (this.selectedOrgName) {
+                rootNodes.push(
+                    new MetadataNode(
+                        `Connected Org: ${this.selectedOrgName}`,
+                        vscode.TreeItemCollapsibleState.None,
+                        'SalesforceOrg'
+                    )
+                );
+            }
+
+            rootNodes.push(
                 new MetadataNode(
                     'Custom Objects',
                     vscode.TreeItemCollapsibleState.Collapsed,
@@ -39,7 +58,9 @@ export class MetadataProvider implements vscode.TreeDataProvider<MetadataNode> {
                     vscode.TreeItemCollapsibleState.Collapsed,
                     'PermissionSet'
                 )
-            ]);
+            );
+
+            return Promise.resolve(rootNodes);
         }
 
         switch (element.label) {
