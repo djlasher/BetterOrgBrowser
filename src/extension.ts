@@ -144,13 +144,38 @@ export function activate(context: vscode.ExtensionContext): void {
         }
     );
 
+    const writeManifestCommand = vscode.commands.registerCommand(
+        'betterOrgBrowser.writeManifest',
+        async () => {
+            const folders = vscode.workspace.workspaceFolders;
+
+            if (!folders?.length) {
+                vscode.window.showWarningMessage('Open a workspace folder before writing package.xml.');
+                return;
+            }
+
+            const manifestFolder = vscode.Uri.joinPath(folders[0].uri, 'manifest');
+            const manifestFile = vscode.Uri.joinPath(manifestFolder, 'package.xml');
+            const xml = packageXmlBuilder.build();
+
+            await vscode.workspace.fs.createDirectory(manifestFolder);
+            await vscode.workspace.fs.writeFile(manifestFile, Buffer.from(xml, 'utf8'));
+
+            const document = await vscode.workspace.openTextDocument(manifestFile);
+            await vscode.window.showTextDocument(document, { preview: false });
+
+            vscode.window.showInformationMessage('Wrote manifest/package.xml');
+        }
+    );
+
     context.subscriptions.push(
         refreshCommand,
         selectOrgCommand,
         showFieldDetailsCommand,
         copyApiNameCommand,
         addToManifestCommand,
-        previewManifestCommand
+        previewManifestCommand,
+        writeManifestCommand
     );
 
     console.log('Better Org Browser activated.');
