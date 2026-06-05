@@ -13,7 +13,8 @@
   "activationEvents": [
     "onView:betterOrgBrowserView",
     "onCommand:betterOrgBrowser.selectOrg",
-    "onCommand:betterOrgBrowser.showFieldDetails"
+    "onCommand:betterOrgBrowser.showFieldDetails",
+    "onCommand:betterOrgBrowser.copyApiName"
   ],
   "main": "./out/extension.js",
   "contributes": {
@@ -46,6 +47,10 @@
       {
         "command": "betterOrgBrowser.showFieldDetails",
         "title": "Better Org Browser: Show Field Details"
+      },
+      {
+        "command": "betterOrgBrowser.copyApiName",
+        "title": "Better Org Browser: Copy API Name"
       }
     ],
     "menus": {
@@ -53,6 +58,11 @@
         {
           "command": "betterOrgBrowser.showFieldDetails",
           "when": "view == betterOrgBrowserView && viewItem =~ /^(string|picklist|currency|address|double|textarea|reference|datetime|boolean|date|int|id|phone|email|url|percent|multipicklist|encryptedstring)$/",
+          "group": "navigation"
+        },
+        {
+          "command": "betterOrgBrowser.copyApiName",
+          "when": "view == betterOrgBrowserView",
           "group": "navigation"
         }
       ]
