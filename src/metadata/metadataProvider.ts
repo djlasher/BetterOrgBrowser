@@ -118,6 +118,41 @@ export class MetadataProvider implements vscode.TreeDataProvider<MetadataNode> {
                     ];
                 }
 
+            case 'Flows':
+                if (!this.selectedOrgTarget) {
+                    return [
+                        new MetadataNode(
+                            'Select a Salesforce org first',
+                            vscode.TreeItemCollapsibleState.None,
+                            'Info'
+                        )
+                    ];
+                }
+
+                try {
+                    const flows = await this.orgService.listFlows(this.selectedOrgTarget);
+
+                    return flows.map((flow: MetadataListItem) =>
+                        new MetadataNode(
+                            flow.fullName,
+                            vscode.TreeItemCollapsibleState.None,
+                            flow.type ?? 'Flow'
+                        )
+                    );
+                } catch (error) {
+                    const message = error instanceof Error
+                        ? error.message
+                        : 'Unknown Flow metadata error';
+
+                    return [
+                        new MetadataNode(
+                            `Error: ${message}`,
+                            vscode.TreeItemCollapsibleState.None,
+                            'Error'
+                        )
+                    ];
+                }
+
             case 'Account':
                 return [
                     new MetadataNode(
