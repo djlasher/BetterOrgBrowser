@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+import { SObjectField } from '../salesforce/orgService';
 
 export class MetadataNode extends vscode.TreeItem {
     constructor(
@@ -6,7 +7,8 @@ export class MetadataNode extends vscode.TreeItem {
         public readonly collapsibleState: vscode.TreeItemCollapsibleState,
         public readonly metadataType?: string,
         public readonly apiName?: string,
-        public readonly parentApiName?: string
+        public readonly parentApiName?: string,
+        public readonly fieldDetails?: SObjectField
     ) {
         super(label, collapsibleState);
 
