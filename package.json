@@ -14,7 +14,9 @@
     "onView:betterOrgBrowserView",
     "onCommand:betterOrgBrowser.selectOrg",
     "onCommand:betterOrgBrowser.showFieldDetails",
-    "onCommand:betterOrgBrowser.copyApiName"
+    "onCommand:betterOrgBrowser.copyApiName",
+    "onCommand:betterOrgBrowser.addToManifest",
+    "onCommand:betterOrgBrowser.previewManifest"
   ],
   "main": "./out/extension.js",
   "contributes": {
@@ -51,19 +53,32 @@
       {
         "command": "betterOrgBrowser.copyApiName",
         "title": "Better Org Browser: Copy API Name"
+      },
+      {
+        "command": "betterOrgBrowser.addToManifest",
+        "title": "Better Org Browser: Add to Manifest"
+      },
+      {
+        "command": "betterOrgBrowser.previewManifest",
+        "title": "Better Org Browser: Preview Manifest"
       }
     ],
     "menus": {
       "view/item/context": [
         {
+          "command": "betterOrgBrowser.addToManifest",
+          "when": "view == betterOrgBrowserView && viewItem =~ /^(ApexClass|Flow|CustomObject|string|picklist|currency|address|double|textarea|reference|datetime|boolean|date|int|id|phone|email|url|percent|multipicklist|encryptedstring)$/",
+          "group": "navigation@1"
+        },
+        {
           "command": "betterOrgBrowser.showFieldDetails",
           "when": "view == betterOrgBrowserView && viewItem =~ /^(string|picklist|currency|address|double|textarea|reference|datetime|boolean|date|int|id|phone|email|url|percent|multipicklist|encryptedstring)$/",
-          "group": "navigation"
+          "group": "navigation@2"
         },
         {
           "command": "betterOrgBrowser.copyApiName",
           "when": "view == betterOrgBrowserView",
-          "group": "navigation"
+          "group": "navigation@3"
         }
       ]
     }
