@@ -115,6 +115,19 @@ export class OrgService {
             .sort((a, b) => a.name.localeCompare(b.name));
     }
 
+    public async retrieveManifest(targetOrg: string, manifestPath: string, cwd: string): Promise<string> {
+        return this.runSfCommand([
+            'project',
+            'retrieve',
+            'start',
+            '--manifest',
+            manifestPath,
+            '--target-org',
+            targetOrg,
+            '--json'
+        ], cwd);
+    }
+
     public getOrgDisplayName(org: SalesforceOrg): string {
         return org.alias ? `${org.alias} (${org.username})` : org.username;
     }
@@ -123,9 +136,9 @@ export class OrgService {
         return org.alias ?? org.username;
     }
 
-    private runSfCommand(args: string[]): Promise<string> {
+    private runSfCommand(args: string[], cwd?: string): Promise<string> {
         return new Promise((resolve, reject) => {
-            execFile(this.getSfExecutableName(), args, { shell: process.platform === 'win32' }, (error, stdout, stderr) => {
+            execFile(this.getSfExecutableName(), args, { shell: process.platform === 'win32', cwd }, (error, stdout, stderr) => {
                 if (error) {
                     reject(new Error(stderr || error.message));
                     return;
