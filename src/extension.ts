@@ -1,11 +1,13 @@
 import * as vscode from 'vscode';
 import { MetadataProvider } from './metadata/metadataProvider';
 import { MetadataNode } from './metadata/metadataNode';
+import { PackageXmlBuilder } from './packageXml/packageXmlBuilder';
 import { OrgService, SalesforceOrg } from './salesforce/orgService';
 
 export function activate(context: vscode.ExtensionContext): void {
     const provider = new MetadataProvider();
     const orgService = new OrgService();
+    const packageXmlBuilder = new PackageXmlBuilder();
 
     vscode.window.registerTreeDataProvider(
         'betterOrgBrowserView',
@@ -106,11 +108,49 @@ export function activate(context: vscode.ExtensionContext): void {
         }
     );
 
+    const addToManifestCommand = vscode.commands.registerCommand(
+        'betterOrgBrowser.addToManifest',
+        async (node: MetadataNode) => {
+            if (!node?.packageXmlType) {
+                vscode.window.showWarningMessage('This metadata item cannot be added to package.xml yet.');
+                return;
+            }
+
+            const memberName = node.parentApiName && node.packageXmlType === 'CustomField'
+                ? `${node.parentApiName}.${node.apiName}`
+                : node.apiName ?? node.label;
+
+            packageXmlBuilder.add(node.packageXmlType, memberName);
+
+            vscode.window.showInformationMessage(
+                `Added ${memberName} to package.xml selections (${packageXmlBuilder.getCount()} total)`
+            );
+        }
+    );
+
+    const previewManifestCommand = vscode.commands.registerCommand(
+        'betterOrgBrowser.previewManifest',
+        async () => {
+            const xml = packageXmlBuilder.build();
+
+            const document = await vscode.workspace.openTextDocument({
+                content: xml,
+                language: 'xml'
+            });
+
+            await vscode.window.showTextDocument(document, {
+                preview: false
+            });
+        }
+    );
+
     context.subscriptions.push(
         refreshCommand,
         selectOrgCommand,
         showFieldDetailsCommand,
-        copyApiNameCommand
+        copyApiNameCommand,
+        addToManifestCommand,
+        previewManifestCommand
     );
 
     console.log('Better Org Browser activated.');
