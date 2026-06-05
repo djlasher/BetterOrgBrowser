@@ -17,6 +17,16 @@ export interface MetadataListItem {
     lastModifiedDate?: string;
 }
 
+export interface SObjectField {
+    name: string;
+    label?: string;
+    type?: string;
+    nillable?: boolean;
+    createable?: boolean;
+    updateable?: boolean;
+    calculated?: boolean;
+}
+
 interface SfOrgListResult {
     result?: {
         other?: SalesforceOrg[];
@@ -28,6 +38,12 @@ interface SfOrgListResult {
 
 interface SfMetadataListResult {
     result?: MetadataListItem[];
+}
+
+interface SfSObjectDescribeResult {
+    result?: {
+        fields?: SObjectField[];
+    };
 }
 
 export class OrgService {
@@ -73,8 +89,30 @@ export class OrgService {
         return this.listMetadata(targetOrg, 'ApexClass');
     }
 
+    public async listCustomObjects(targetOrg: string): Promise<MetadataListItem[]> {
+        return this.listMetadata(targetOrg, 'CustomObject');
+    }
+
     public async listFlows(targetOrg: string): Promise<MetadataListItem[]> {
         return this.listMetadata(targetOrg, 'Flow');
+    }
+
+    public async describeSObject(targetOrg: string, objectApiName: string): Promise<SObjectField[]> {
+        const output = await this.runSfCommand([
+            'sobject',
+            'describe',
+            '--sobject',
+            objectApiName,
+            '--target-org',
+            targetOrg,
+            '--json'
+        ]);
+
+        const parsed = JSON.parse(output) as SfSObjectDescribeResult;
+
+        return (parsed.result?.fields ?? [])
+            .filter((field) => Boolean(field.name))
+            .sort((a, b) => a.name.localeCompare(b.name));
     }
 
     public getOrgDisplayName(org: SalesforceOrg): string {
