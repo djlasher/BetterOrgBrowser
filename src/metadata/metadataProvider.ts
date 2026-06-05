@@ -110,7 +110,10 @@ export class MetadataProvider implements vscode.TreeDataProvider<MetadataNode> {
                     customObject.fullName,
                     vscode.TreeItemCollapsibleState.Collapsed,
                     'CustomObject',
-                    customObject.fullName
+                    customObject.fullName,
+                    undefined,
+                    undefined,
+                    'CustomObject'
                 )
             );
         } catch (error) {
@@ -136,7 +139,8 @@ export class MetadataProvider implements vscode.TreeDataProvider<MetadataNode> {
                     field.type ?? 'Field',
                     field.name,
                     objectApiName,
-                    field
+                    field,
+                    'CustomField'
                 )
             );
         } catch (error) {
@@ -156,7 +160,11 @@ export class MetadataProvider implements vscode.TreeDataProvider<MetadataNode> {
                 new MetadataNode(
                     apexClass.fullName,
                     vscode.TreeItemCollapsibleState.None,
-                    apexClass.type ?? 'ApexClass'
+                    apexClass.type ?? 'ApexClass',
+                    apexClass.fullName,
+                    undefined,
+                    undefined,
+                    'ApexClass'
                 )
             );
         } catch (error) {
@@ -176,7 +184,11 @@ export class MetadataProvider implements vscode.TreeDataProvider<MetadataNode> {
                 new MetadataNode(
                     flow.fullName,
                     vscode.TreeItemCollapsibleState.None,
-                    flow.type ?? 'Flow'
+                    flow.type ?? 'Flow',
+                    flow.fullName,
+                    undefined,
+                    undefined,
+                    'Flow'
                 )
             );
         } catch (error) {
