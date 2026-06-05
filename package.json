@@ -11,7 +11,8 @@
     "Other"
   ],
   "activationEvents": [
-    "onView:betterOrgBrowserView"
+    "onView:betterOrgBrowserView",
+    "onCommand:betterOrgBrowser.selectOrg"
   ],
   "main": "./out/extension.js",
   "contributes": {
@@ -36,6 +37,10 @@
       {
         "command": "betterOrgBrowser.refresh",
         "title": "Refresh Better Org Browser"
+      },
+      {
+        "command": "betterOrgBrowser.selectOrg",
+        "title": "Better Org Browser: Select Salesforce Org"
       }
     ]
   },
