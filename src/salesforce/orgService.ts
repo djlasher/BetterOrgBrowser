@@ -50,13 +50,13 @@ export class OrgService {
             .sort((a, b) => this.getOrgDisplayName(a).localeCompare(this.getOrgDisplayName(b)));
     }
 
-    public async listApexClasses(targetOrg: string): Promise<MetadataListItem[]> {
+    public async listMetadata(targetOrg: string, metadataType: string): Promise<MetadataListItem[]> {
         const output = await this.runSfCommand([
             'org',
             'list',
             'metadata',
             '--metadata-type',
-            'ApexClass',
+            metadataType,
             '--target-org',
             targetOrg,
             '--json'
@@ -67,6 +67,14 @@ export class OrgService {
         return (parsed.result ?? [])
             .filter((item) => Boolean(item.fullName))
             .sort((a, b) => a.fullName.localeCompare(b.fullName));
+    }
+
+    public async listApexClasses(targetOrg: string): Promise<MetadataListItem[]> {
+        return this.listMetadata(targetOrg, 'ApexClass');
+    }
+
+    public async listFlows(targetOrg: string): Promise<MetadataListItem[]> {
+        return this.listMetadata(targetOrg, 'Flow');
     }
 
     public getOrgDisplayName(org: SalesforceOrg): string {
