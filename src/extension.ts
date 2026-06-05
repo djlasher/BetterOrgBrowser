@@ -8,6 +8,7 @@ export function activate(context: vscode.ExtensionContext): void {
     const provider = new MetadataProvider();
     const orgService = new OrgService();
     const packageXmlBuilder = new PackageXmlBuilder();
+    let selectedOrgTarget: string | undefined;
 
     vscode.window.registerTreeDataProvider(
         'betterOrgBrowserView',
@@ -50,9 +51,11 @@ export function activate(context: vscode.ExtensionContext): void {
                     return;
                 }
 
+                selectedOrgTarget = orgService.getOrgTargetName(selected.org);
+
                 provider.setSelectedOrg(
                     selected.label,
-                    orgService.getOrgTargetName(selected.org)
+                    selectedOrgTarget
                 );
                 vscode.window.showInformationMessage(
                     `Connected to ${selected.label}`
@@ -168,6 +171,59 @@ export function activate(context: vscode.ExtensionContext): void {
         }
     );
 
+    const retrieveManifestCommand = vscode.commands.registerCommand(
+        'betterOrgBrowser.retrieveManifest',
+        async () => {
+            const folders = vscode.workspace.workspaceFolders;
+
+            if (!folders?.length) {
+                vscode.window.showWarningMessage('Open a Salesforce DX project before retrieving metadata.');
+                return;
+            }
+
+            if (!selectedOrgTarget) {
+                vscode.window.showWarningMessage('Select a Salesforce org before retrieving metadata.');
+                return;
+            }
+
+            const root = folders[0].uri;
+            const projectFile = vscode.Uri.joinPath(root, 'sfdx-project.json');
+            const manifestFile = vscode.Uri.joinPath(root, 'manifest', 'package.xml');
+
+            try {
+                await vscode.workspace.fs.stat(projectFile);
+                await vscode.workspace.fs.stat(manifestFile);
+            } catch {
+                vscode.window.showWarningMessage('Missing sfdx-project.json or manifest/package.xml.');
+                return;
+            }
+
+            await vscode.window.withProgress(
+                {
+                    location: vscode.ProgressLocation.Notification,
+                    title: 'Retrieving Salesforce metadata',
+                    cancellable: false
+                },
+                async () => {
+                    const output = await orgService.retrieveManifest(
+                        selectedOrgTarget,
+                        'manifest/package.xml',
+                        root.fsPath
+                    );
+
+                    const document = await vscode.workspace.openTextDocument({
+                        content: output,
+                        language: 'json'
+                    });
+
+                    await vscode.window.showTextDocument(document, { preview: false });
+                }
+            );
+
+            vscode.window.showInformationMessage('Retrieve complete.');
+        }
+    );
+
     context.subscriptions.push(
         refreshCommand,
         selectOrgCommand,
@@ -175,7 +231,8 @@ export function activate(context: vscode.ExtensionContext): void {
         copyApiNameCommand,
         addToManifestCommand,
         previewManifestCommand,
-        writeManifestCommand
+        writeManifestCommand,
+        retrieveManifestCommand
     );
 
     console.log('Better Org Browser activated.');
