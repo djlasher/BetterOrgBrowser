@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import { MetadataProvider } from './metadata/metadataProvider';
+import { MetadataNode } from './metadata/metadataNode';
 import { OrgService, SalesforceOrg } from './salesforce/orgService';
 
 export function activate(context: vscode.ExtensionContext): void {
@@ -64,7 +65,31 @@ export function activate(context: vscode.ExtensionContext): void {
         }
     );
 
-    context.subscriptions.push(refreshCommand, selectOrgCommand);
+    const showFieldDetailsCommand = vscode.commands.registerCommand(
+        'betterOrgBrowser.showFieldDetails',
+        async (node: MetadataNode) => {
+            if (!node?.fieldDetails) {
+                vscode.window.showWarningMessage('No field details are available for this item.');
+                return;
+            }
+
+            const field = node.fieldDetails;
+            const details = [
+                `Object: ${node.parentApiName ?? 'Unknown'}`,
+                `API Name: ${field.name}`,
+                `Label: ${field.label ?? ''}`,
+                `Type: ${field.type ?? ''}`,
+                `Required: ${field.nillable === false ? 'Yes' : 'No'}`,
+                `Createable: ${field.createable ? 'Yes' : 'No'}`,
+                `Updateable: ${field.updateable ? 'Yes' : 'No'}`,
+                `Calculated: ${field.calculated ? 'Yes' : 'No'}`
+            ].join('\n');
+
+            await vscode.window.showInformationMessage(details, { modal: true });
+        }
+    );
+
+    context.subscriptions.push(refreshCommand, selectOrgCommand, showFieldDetailsCommand);
 
     console.log('Better Org Browser activated.');
 }
