@@ -52,8 +52,8 @@
       "view/item/context": [
         {
           "command": "betterOrgBrowser.showFieldDetails",
-          "when": "view == betterOrgBrowserView && viewItem == string",
-          "group": "inline"
+          "when": "view == betterOrgBrowserView && viewItem =~ /^(string|picklist|currency|address|double|textarea|reference|datetime|boolean|date|int|id|phone|email|url|percent|multipicklist|encryptedstring)$/",
+          "group": "navigation"
         }
       ]
     }
