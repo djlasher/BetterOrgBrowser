@@ -8,6 +8,15 @@ export interface SalesforceOrg {
     isDefaultUsername?: boolean;
 }
 
+export interface MetadataListItem {
+    fullName: string;
+    fileName?: string;
+    type?: string;
+    manageableState?: string;
+    namespacePrefix?: string | null;
+    lastModifiedDate?: string;
+}
+
 interface SfOrgListResult {
     result?: {
         other?: SalesforceOrg[];
@@ -15,6 +24,10 @@ interface SfOrgListResult {
         scratchOrgs?: SalesforceOrg[];
         sandboxes?: SalesforceOrg[];
     };
+}
+
+interface SfMetadataListResult {
+    result?: MetadataListItem[];
 }
 
 export class OrgService {
@@ -37,8 +50,31 @@ export class OrgService {
             .sort((a, b) => this.getOrgDisplayName(a).localeCompare(this.getOrgDisplayName(b)));
     }
 
+    public async listApexClasses(targetOrg: string): Promise<MetadataListItem[]> {
+        const output = await this.runSfCommand([
+            'org',
+            'list',
+            'metadata',
+            '--metadata-type',
+            'ApexClass',
+            '--target-org',
+            targetOrg,
+            '--json'
+        ]);
+
+        const parsed = JSON.parse(output) as SfMetadataListResult;
+
+        return (parsed.result ?? [])
+            .filter((item) => Boolean(item.fullName))
+            .sort((a, b) => a.fullName.localeCompare(b.fullName));
+    }
+
     public getOrgDisplayName(org: SalesforceOrg): string {
         return org.alias ? `${org.alias} (${org.username})` : org.username;
+    }
+
+    public getOrgTargetName(org: SalesforceOrg): string {
+        return org.alias ?? org.username;
     }
 
     private runSfCommand(args: string[]): Promise<string> {
