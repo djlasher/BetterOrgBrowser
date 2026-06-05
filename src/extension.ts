@@ -181,7 +181,9 @@ export function activate(context: vscode.ExtensionContext): void {
                 return;
             }
 
-            if (!selectedOrgTarget) {
+            const targetOrg = selectedOrgTarget;
+
+            if (!targetOrg) {
                 vscode.window.showWarningMessage('Select a Salesforce org before retrieving metadata.');
                 return;
             }
@@ -206,7 +208,7 @@ export function activate(context: vscode.ExtensionContext): void {
                 },
                 async () => {
                     const output = await orgService.retrieveManifest(
-                        selectedOrgTarget,
+                        targetOrg,
                         'manifest/package.xml',
                         root.fsPath
                     );
