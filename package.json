@@ -1,0 +1,51 @@
+{
+  "name": "better-org-browser",
+  "displayName": "Better Org Browser",
+  "description": "Granular Salesforce metadata explorer for VS Code.",
+  "version": "0.0.1",
+  "publisher": "djlasher",
+  "engines": {
+    "vscode": "^1.90.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [
+    "onView:betterOrgBrowserView"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "betterOrgBrowser",
+          "title": "Better Org Browser",
+          "icon": "media/icon.svg"
+        }
+      ]
+    },
+    "views": {
+      "betterOrgBrowser": [
+        {
+          "id": "betterOrgBrowserView",
+          "name": "Metadata Explorer"
+        }
+      ]
+    },
+    "commands": [
+      {
+        "command": "betterOrgBrowser.refresh",
+        "title": "Refresh Better Org Browser"
+      }
+    ]
+  },
+  "scripts": {
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.2",
+    "@types/vscode": "^1.90.0",
+    "typescript": "^5.5.2"
+  }
+}
