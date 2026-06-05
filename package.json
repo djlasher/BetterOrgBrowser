@@ -17,7 +17,8 @@
     "onCommand:betterOrgBrowser.copyApiName",
     "onCommand:betterOrgBrowser.addToManifest",
     "onCommand:betterOrgBrowser.previewManifest",
-    "onCommand:betterOrgBrowser.writeManifest"
+    "onCommand:betterOrgBrowser.writeManifest",
+    "onCommand:betterOrgBrowser.retrieveManifest"
   ],
   "main": "./out/extension.js",
   "contributes": {
@@ -66,6 +67,10 @@
       {
         "command": "betterOrgBrowser.writeManifest",
         "title": "Better Org Browser: Write Manifest to File"
+      },
+      {
+        "command": "betterOrgBrowser.retrieveManifest",
+        "title": "Better Org Browser: Retrieve Manifest"
       }
     ],
     "menus": {
