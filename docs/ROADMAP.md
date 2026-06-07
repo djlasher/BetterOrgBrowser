@@ -1,6 +1,6 @@
 # BetterOrgBrowser Roadmap
 
-BetterOrgBrowser is intended to grow from a live Salesforce metadata browser into a granular metadata retrieval, inspection, and dependency assistant for VS Code.
+BetterOrgBrowser is intended to grow from a live Salesforce metadata browser into a granular metadata retrieval, inspection, permission-set patching, and dependency assistant for VS Code.
 
 ## Vision
 
@@ -9,7 +9,17 @@ Salesforce developers often need to retrieve or inspect one exact thing: a field
 BetterOrgBrowser should make that workflow feel precise:
 
 ```text
-Find exact metadata → inspect it → select it → generate package.xml → retrieve it → understand dependencies
+Find exact metadata → inspect it → select it → generate package.xml → retrieve or patch it → understand dependencies
+```
+
+The standout workflow is granular Permission Set patching:
+
+```text
+Git has a truncated Permission Set
+Org has the full Permission Set
+Developer browses remote permission entries
+Developer syncs one selected entry into local XML
+Result: tiny clean diff instead of full Permission Set churn
 ```
 
 ## Phase 0 — Extension foundation ✅ Done
@@ -30,6 +40,7 @@ Find exact metadata → inspect it → select it → generate package.xml → re
 - Select org through VS Code QuickPick.
 - Display selected org in the tree.
 - Persist selected org across reloads.
+- Add Salesforce CLI output logging.
 
 ## Phase 2 — Live metadata browsing ✅ Done
 
@@ -39,6 +50,7 @@ Supported live metadata categories:
 - Flows
 - Custom Objects
 - Object Fields
+- Permission Sets
 
 ## Phase 3 — Metadata inspection ✅ Done
 
@@ -47,6 +59,8 @@ Implemented:
 - Right-click Show Field Details.
 - Right-click Copy API Name.
 - Field metadata stored on tree nodes.
+- Permission Set Object Permission details.
+- Permission Set Field Permission details.
 
 ## Phase 4 — Manifest generation ✅ Done
 
@@ -70,19 +84,24 @@ Implemented:
 - Retrieve Manifest command.
 - Validation for workspace folder, `sfdx-project.json`, and `manifest/package.xml`.
 - Retrieval tested successfully in a separate SFDX project.
+- Friendly retrieve summary.
+- Retrieve output channel logging.
+- Readable retrieve failure logging.
 
 Remaining improvements:
 
-- Show friendly retrieve summary instead of raw JSON.
-- Add output channel logging.
-- Add readable failure parsing.
 - Add Retrieve Selected Metadata convenience command.
+- Add richer retrieve result actions.
 
-## Phase 6 — Metadata expansion
+## Phase 6 — Metadata expansion 🚧 In progress
 
-Add live browsing for:
+Implemented:
 
-- Permission Sets
+- Permission Sets live listing.
+- Permission Set manifest support.
+
+Still planned:
+
 - Profiles
 - Lightning Web Components
 - Aura Components
@@ -115,23 +134,56 @@ Account
 └── Child Relationships
 ```
 
-## Phase 8 — Permission Set deep browser
+## Phase 8 — Permission Set deep browser 🚧 In progress
 
 Primary differentiator feature.
 
-Goal:
+Current working shape:
 
 ```text
 Permission Sets
 └── My_Permission_Set
     ├── Object Permissions
+    │   └── Account
+    │       ├── Read: Yes
+    │       ├── Create: Yes
+    │       ├── Edit: Yes
+    │       ├── Delete: No
+    │       ├── View All Records: No
+    │       └── Modify All Records: No
     ├── Field Permissions
+    │   └── Account.Custom_Field__c
+    │       ├── Readable: Yes
+    │       └── Editable: Yes
     ├── Apex Class Access
     ├── Flow Access
     ├── Custom Permissions
     ├── Tab Settings
     └── User Permissions
 ```
+
+Implemented:
+
+- Permission Set folder shell.
+- Object Permissions parser.
+- Field Permissions parser.
+- Expandable Object Permission detail rows.
+- Expandable Field Permission detail rows.
+- Metadata-format temporary retrieve for remote Permission Set XML.
+- Inline Sync Field Permission Entry command.
+- Single-entry merge into local source-format Permission Set XML.
+
+Next improvements:
+
+- Insert synced Field Permission blocks in sorted/stable order instead of appending near the bottom.
+- Add Sync Object Permission Entry.
+- Cache remote Permission Set XML during a session to avoid repeated CLI retrieves.
+- Fill Apex Class Access.
+- Fill Flow Access.
+- Fill Custom Permissions.
+- Fill Tab Settings.
+- Fill User Permissions.
+- Add better icons/labels for permission sync actions.
 
 ## Phase 9 — Dependency awareness
 
@@ -153,6 +205,7 @@ Features:
 
 - Cache metadata list responses.
 - Cache object describe responses.
+- Cache remote Permission Set XML responses.
 - Add refresh controls.
 - Add loading indicators.
 - Avoid repeated CLI calls.
@@ -169,6 +222,7 @@ Possible improvements:
 - Multi-select support.
 - Better field detail display.
 - Selected-state indicators for manifest entries.
+- Inline one-click sync/retrieve affordances similar to the standard Org Browser UX.
 
 ## Phase 12 — Packaging
 
@@ -199,15 +253,16 @@ npm run compile
 3. Open SFDX test project in Extension Development Host.
 4. Verify selected org persisted.
 5. Verify manifest selections persisted.
-6. Verify status bar manifest count updates.
-7. Improve retrieve result formatting.
-8. Start Permission Set implementation.
-9. Begin modularizing `extension.ts`.
+6. Verify Permission Set browsing still works.
+7. Verify Field Permission sync still works.
+8. Improve sorted insertion for synced Field Permission entries.
+9. Add Object Permission sync.
+10. Begin modularizing `extension.ts`.
 
 ## Guardrails
 
 - Keep the extension repo as a VS Code extension repo.
-- Use a separate SFDX test project for retrieval testing.
+- Use a separate SFDX test project for retrieval and sync testing.
 - Do not commit retrieved metadata into the extension repo.
-- Do not commit local scratch describe JSON.
+- Do not commit local scratch describe JSON or `.better-org-browser` temp output.
 - Keep generated folders like `node_modules` and `out` ignored.
