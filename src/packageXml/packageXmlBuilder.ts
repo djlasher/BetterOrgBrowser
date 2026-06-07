@@ -30,6 +30,16 @@ export class PackageXmlBuilder {
         return removed;
     }
 
+    replaceSelections(selections: PackageXmlMember[]): void {
+        this.clear();
+
+        for (const selection of selections) {
+            if (selection.type && selection.member) {
+                this.add(selection.type, selection.member);
+            }
+        }
+    }
+
     clear(): void {
         this.selections.clear();
     }
