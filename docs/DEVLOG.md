@@ -4,6 +4,30 @@ Session-based development history for BetterOrgBrowser.
 
 Use versions instead of dates. Keep this to one entry per work session.
 
+## v0.0.2 - Manifest Selection UX Commands
+
+### Completed
+
+- Added package.xml selection helper methods.
+- Added Remove from Manifest command.
+- Added Clear Manifest Selections command.
+- Added Show Manifest Selections command.
+- Registered new commands in package.json.
+- Added toolbar actions for showing selections, clearing selections, and refreshing the tree.
+- Added right-click Remove from Manifest option for supported metadata nodes.
+
+### Current Gaps
+
+- Manifest selections are still in memory only.
+- No dedicated Manifest Selections tree section yet.
+- Remove from Manifest does not visually indicate whether a node is already selected.
+
+### Next Focus
+
+- Persist manifest selections with workspace state.
+- Add visible manifest selection count.
+- Consider adding a Manifest Selections tree node.
+
 ## v0.0.1 - Extension Foundation And Live Metadata MVP
 
 ### Completed
