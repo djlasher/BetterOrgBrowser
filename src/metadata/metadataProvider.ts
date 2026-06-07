@@ -210,8 +210,11 @@ export class MetadataProvider implements vscode.TreeDataProvider<MetadataNode> {
 
         try {
             const root = folders[0].uri;
-            await this.orgService.retrievePermissionSet(this.selectedOrgTarget, permissionSetApiName, root.fsPath);
-            const permissionSetFile = vscode.Uri.joinPath(root, 'force-app', 'main', 'default', 'permissionsets', `${permissionSetApiName}.permissionset-meta.xml`);
+            const tempRoot = vscode.Uri.joinPath(root, '.better-org-browser', 'remote-permissions', `${permissionSetApiName}-${Date.now()}`);
+            await vscode.workspace.fs.createDirectory(tempRoot);
+            await this.orgService.retrievePermissionSet(this.selectedOrgTarget, permissionSetApiName, root.fsPath, tempRoot.fsPath);
+
+            const permissionSetFile = vscode.Uri.joinPath(tempRoot, 'force-app', 'main', 'default', 'permissionsets', `${permissionSetApiName}.permissionset-meta.xml`);
             const bytes = await vscode.workspace.fs.readFile(permissionSetFile);
 
             return Buffer.from(bytes).toString('utf8');
