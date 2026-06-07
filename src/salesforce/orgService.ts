@@ -1,4 +1,5 @@
 import { execFile } from 'child_process';
+import * as vscode from 'vscode';
 
 export interface SalesforceOrg {
     alias?: string;
@@ -47,6 +48,8 @@ interface SfSObjectDescribeResult {
 }
 
 export class OrgService {
+    private readonly cliOutputChannel = vscode.window.createOutputChannel('Better Org Browser Salesforce CLI');
+
     public async listAuthorizedOrgs(): Promise<SalesforceOrg[]> {
         const output = await this.runSfCommand(['org', 'list', '--json']);
         const parsed = JSON.parse(output) as SfOrgListResult;
@@ -176,16 +179,41 @@ export class OrgService {
     }
 
     private runSfCommand(args: string[], cwd?: string): Promise<string> {
+        const executable = this.getSfExecutableName();
+        const commandText = `${executable} ${args.map((arg) => this.formatArg(arg)).join(' ')}`;
+
+        this.cliOutputChannel.appendLine(`[${new Date().toISOString()}] cwd: ${cwd ?? process.cwd()}`);
+        this.cliOutputChannel.appendLine(`[${new Date().toISOString()}] command: ${commandText}`);
+
         return new Promise((resolve, reject) => {
-            execFile(this.getSfExecutableName(), args, { shell: process.platform === 'win32', cwd }, (error, stdout, stderr) => {
+            execFile(executable, args, { shell: process.platform === 'win32', cwd }, (error, stdout, stderr) => {
+                if (stdout) {
+                    this.cliOutputChannel.appendLine('--- stdout ---');
+                    this.cliOutputChannel.appendLine(stdout);
+                }
+
+                if (stderr) {
+                    this.cliOutputChannel.appendLine('--- stderr ---');
+                    this.cliOutputChannel.appendLine(stderr);
+                }
+
                 if (error) {
-                    reject(new Error(stderr || error.message));
+                    this.cliOutputChannel.appendLine('--- error ---');
+                    this.cliOutputChannel.appendLine(error.message);
+                    this.cliOutputChannel.show(true);
+                    reject(new Error(stderr || stdout || error.message));
                     return;
                 }
 
+                this.cliOutputChannel.appendLine('--- success ---');
+                this.cliOutputChannel.appendLine('');
                 resolve(stdout);
             });
         });
+    }
+
+    private formatArg(arg: string): string {
+        return /\s/.test(arg) ? `"${arg}"` : arg;
     }
 
     private getSfExecutableName(): string {
