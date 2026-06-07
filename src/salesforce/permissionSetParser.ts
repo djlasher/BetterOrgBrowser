@@ -41,7 +41,7 @@ export function findFieldPermissionBlock(xml: string, fieldName: string): string
 export function mergeFieldPermissionBlock(localXml: string, remoteBlock: string, fieldName: string): string {
     const blocks = localXml.match(/<fieldPermissions>[\s\S]*?<\/fieldPermissions>/g) ?? [];
     const existingBlock = blocks.find((block) => readTagValue(block, 'field') === fieldName);
-    const normalizedRemoteBlock = indentBlock(remoteBlock, '    ');
+    const normalizedRemoteBlock = normalizeBlockIndent(remoteBlock, detectPermissionEntryIndent(localXml));
 
     if (existingBlock) {
         return localXml.replace(existingBlock, normalizedRemoteBlock);
@@ -93,10 +93,21 @@ function readTagValue(block: string, tagName: string): string | undefined {
     return match?.[1]?.trim();
 }
 
-function indentBlock(block: string, indent: string): string {
-    return block
-        .trim()
-        .split(/\r?\n/)
-        .map((line) => `${indent}${line.trim()}`)
+function detectPermissionEntryIndent(xml: string): string {
+    const match = xml.match(/\n([ \t]*)<fieldPermissions>/) ?? xml.match(/\n([ \t]*)<objectPermissions>/);
+
+    return match?.[1] ?? '    ';
+}
+
+function normalizeBlockIndent(block: string, targetIndent: string): string {
+    const lines = block.trim().split(/\r?\n/);
+    const sourceIndent = getLeadingWhitespace(lines[0] ?? '');
+
+    return lines
+        .map((line) => `${targetIndent}${line.startsWith(sourceIndent) ? line.slice(sourceIndent.length) : line.trimStart()}`)
         .join('\n');
+}
+
+function getLeadingWhitespace(value: string): string {
+    return value.match(/^[ \t]*/)?.[0] ?? '';
 }
