@@ -21,7 +21,8 @@
     "onCommand:betterOrgBrowser.showManifestSelections",
     "onCommand:betterOrgBrowser.previewManifest",
     "onCommand:betterOrgBrowser.writeManifest",
-    "onCommand:betterOrgBrowser.retrieveManifest"
+    "onCommand:betterOrgBrowser.retrieveManifest",
+    "onCommand:betterOrgBrowser.syncFieldPermissionEntry"
   ],
   "main": "./out/extension.js",
   "contributes": {
@@ -86,10 +87,20 @@
       {
         "command": "betterOrgBrowser.retrieveManifest",
         "title": "Better Org Browser: Retrieve Manifest"
+      },
+      {
+        "command": "betterOrgBrowser.syncFieldPermissionEntry",
+        "title": "Better Org Browser: Sync Field Permission Entry",
+        "icon": "$(cloud-download)"
       }
     ],
     "menus": {
       "view/item/context": [
+        {
+          "command": "betterOrgBrowser.syncFieldPermissionEntry",
+          "when": "view == betterOrgBrowserView && viewItem == PermissionSetFieldPermission",
+          "group": "inline@1"
+        },
         {
           "command": "betterOrgBrowser.addToManifest",
           "when": "view == betterOrgBrowserView && viewItem =~ /^(ApexClass|Flow|CustomObject|PermissionSet|string|picklist|currency|address|double|textarea|reference|datetime|boolean|date|int|id|phone|email|url|percent|multipicklist|encryptedstring)$/",
