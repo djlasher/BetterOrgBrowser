@@ -26,14 +26,10 @@ Find exact metadata → inspect it → select it → generate package.xml → re
 
 - Invoke Salesforce CLI from extension.
 - Handle Windows `sf.cmd` behavior.
-- List authorized orgs with:
-
-```bash
-sf org list --json
-```
-
+- List authorized orgs.
 - Select org through VS Code QuickPick.
 - Display selected org in the tree.
+- Persist selected org across reloads.
 
 ## Phase 2 — Live metadata browsing ✅ Done
 
@@ -44,128 +40,45 @@ Supported live metadata categories:
 - Custom Objects
 - Object Fields
 
-Implemented commands behind the scenes:
-
-```bash
-sf org list metadata --metadata-type ApexClass --target-org <org> --json
-sf org list metadata --metadata-type Flow --target-org <org> --json
-sf org list metadata --metadata-type CustomObject --target-org <org> --json
-sf sobject describe --sobject <object> --target-org <org> --json
-```
-
-Current tree shape:
-
-```text
-Better Org Browser
-├── Connected Org: <org>
-├── Custom Objects
-│   └── Account
-│       └── Fields
-│           └── Active__c
-├── Apex Classes
-├── Flows
-└── Permission Sets
-```
-
 ## Phase 3 — Metadata inspection ✅ Done
 
 Implemented:
 
-- Right-click **Show Field Details**.
-- Right-click **Copy API Name**.
+- Right-click Show Field Details.
+- Right-click Copy API Name.
 - Field metadata stored on tree nodes.
-
-Field details currently include:
-
-- Object
-- API Name
-- Label
-- Type
-- Required
-- Createable
-- Updateable
-- Calculated
 
 ## Phase 4 — Manifest generation ✅ Done
 
 Implemented:
 
-- Right-click **Add to Manifest**.
-- In-memory manifest selection bucket.
-- Package XML builder grouped by metadata type.
-- **Preview Manifest** command.
-- **Write Manifest to File** command.
-
-Generated file:
-
-```text
-manifest/package.xml
-```
-
-Example generated package.xml:
-
-```xml
-<?xml version="1.0" encoding="UTF-8"?>
-<Package xmlns="http://soap.sforce.com/2006/04/metadata">
-    <types>
-        <members>devedapp__DeveloperEditionUtils</members>
-        <name>ApexClass</name>
-    </types>
-    <types>
-        <members>Account.Active__c</members>
-        <name>CustomField</name>
-    </types>
-    <version>66.0</version>
-</Package>
-```
+- Add to Manifest.
+- Package XML builder.
+- Preview Manifest.
+- Write Manifest to File.
+- Remove from Manifest.
+- Clear Manifest Selections.
+- Show Manifest Selections.
+- Persist manifest selections.
+- Status bar manifest count.
 
 ## Phase 5 — Retrieval ✅ First pass done
 
 Implemented:
 
 - Backend retrieve service.
-- **Retrieve Manifest** command exposed.
+- Retrieve Manifest command.
 - Validation for workspace folder, `sfdx-project.json`, and `manifest/package.xml`.
-- Runs:
+- Retrieval tested successfully in a separate SFDX project.
 
-```bash
-sf project retrieve start --manifest manifest/package.xml --target-org <selected-org> --json
-```
-
-Tested successfully in separate SFDX test project.
-
-Next improvements:
+Remaining improvements:
 
 - Show friendly retrieve summary instead of raw JSON.
 - Add output channel logging.
-- Add failure parsing and readable error messages.
-- Add **Retrieve Selected Metadata** convenience command.
+- Add readable failure parsing.
+- Add Retrieve Selected Metadata convenience command.
 
-## Phase 6 — Manifest selection UX 🔜 Next
-
-Current problem: selections are invisible except through generated preview/output.
-
-Next features:
-
-- **Clear Manifest Selections**.
-- **Show Manifest Selections**.
-- **Remove from Manifest**.
-- Manifest selection count.
-- Optional tree section:
-
-```text
-Manifest Selections (3)
-├── ApexClass
-│   └── MyClass
-├── CustomField
-│   └── Account.Active__c
-└── Flow
-    └── MyFlow
-```
-
-- Persist selections with VS Code workspace state.
-
-## Phase 7 — More metadata types
+## Phase 6 — Metadata expansion
 
 Add live browsing for:
 
@@ -173,7 +86,7 @@ Add live browsing for:
 - Profiles
 - Lightning Web Components
 - Aura Components
-- FlexiPages / Lightning Pages
+- FlexiPages
 - Layouts
 - Tabs
 - Custom Labels
@@ -185,16 +98,7 @@ Add live browsing for:
 - Groups
 - Permission Set Groups
 
-Likely commands:
-
-```bash
-sf org list metadata --metadata-type PermissionSet --target-org <org> --json
-sf org list metadata --metadata-type LightningComponentBundle --target-org <org> --json
-sf org list metadata --metadata-type FlexiPage --target-org <org> --json
-sf org list metadata --metadata-type Layout --target-org <org> --json
-```
-
-## Phase 8 — Rich Custom Object drilldown
+## Phase 7 — Rich Custom Object drilldown
 
 Expand Custom Objects beyond Fields:
 
@@ -211,15 +115,9 @@ Account
 └── Child Relationships
 ```
 
-Potential sources:
+## Phase 8 — Permission Set deep browser
 
-- `sf sobject describe`
-- Metadata API list calls
-- Metadata retrieve + XML parsing
-
-## Phase 9 — Permission Set deep browser
-
-This is one of the main differentiators.
+Primary differentiator feature.
 
 Goal:
 
@@ -235,15 +133,7 @@ Permission Sets
     └── User Permissions
 ```
 
-Potential approach:
-
-1. List permission sets.
-2. Retrieve selected permission set XML.
-3. Parse XML locally.
-4. Render nested permissions in tree.
-5. Allow adding individual permission set components or full permission set to manifest.
-
-## Phase 10 — Dependency awareness
+## Phase 9 — Dependency awareness
 
 Future feature ideas:
 
@@ -255,43 +145,32 @@ Future feature ideas:
 - Add dependencies to manifest.
 - Warn when selected metadata may be incomplete.
 
-Example:
+## Phase 10 — Caching and large org performance
 
-```text
-Selected Flow: Case_High_Risk_Flagging
-Detected dependencies:
-├── Case.High_Risk__c
-├── Case.Priority
-├── Queue.Support
-└── Custom Label.High_Risk_Message
-```
-
-## Phase 11 — Caching and large org performance
-
-Needed before using heavily in giant client orgs.
+Needed before heavy enterprise usage.
 
 Features:
 
-- Cache metadata list responses by org + metadata type.
-- Cache object describe responses by org + object.
-- Add refresh controls at category and object levels.
+- Cache metadata list responses.
+- Cache object describe responses.
+- Add refresh controls.
 - Add loading indicators.
-- Avoid repeated CLI calls when expanding/collapsing.
-- Add max result warnings for huge orgs.
+- Avoid repeated CLI calls.
+- Add max result warnings.
 
-## Phase 12 — Better UI
+## Phase 11 — Better UI
 
 Possible improvements:
 
-- Dedicated webview for manifest selections.
+- Dedicated manifest selections tree section.
 - Output channel for CLI logs.
-- Status bar item showing selected org and manifest count.
 - Tree icons by metadata type.
 - Search/filter metadata.
-- Multi-select support if VS Code tree supports needed behavior.
-- Better field detail display in markdown/webview instead of modal.
+- Multi-select support.
+- Better field detail display.
+- Selected-state indicators for manifest entries.
 
-## Phase 13 — Packaging
+## Phase 12 — Packaging
 
 Eventually:
 
@@ -306,11 +185,7 @@ Output:
 better-org-browser-0.0.1.vsix
 ```
 
-Then install locally in VS Code as a normal extension.
-
 ## Immediate next session checklist
-
-Start here next time:
 
 1. Pull latest:
 
@@ -321,18 +196,13 @@ npm run compile
 ```
 
 2. Press `F5`.
-3. In Extension Development Host, open the SFDX test project.
-4. Select Claygentforce org.
-5. Verify:
-
-```text
-Custom Objects → Account → Fields
-```
-
-6. Add a field/class/flow to manifest.
-7. Write manifest.
-8. Retrieve manifest.
-9. Build **Clear Manifest Selections** and **Show Manifest Selections** next.
+3. Open SFDX test project in Extension Development Host.
+4. Verify selected org persisted.
+5. Verify manifest selections persisted.
+6. Verify status bar manifest count updates.
+7. Improve retrieve result formatting.
+8. Start Permission Set implementation.
+9. Begin modularizing `extension.ts`.
 
 ## Guardrails
 
@@ -340,4 +210,4 @@ Custom Objects → Account → Fields
 - Use a separate SFDX test project for retrieval testing.
 - Do not commit retrieved metadata into the extension repo.
 - Do not commit local scratch describe JSON.
-- Node-specific generated files like `node_modules` and `out` should remain ignored.
+- Keep generated folders like `node_modules` and `out` ignored.
