@@ -119,8 +119,8 @@ export class OrgService {
             .sort((a, b) => a.name.localeCompare(b.name));
     }
 
-    public async retrievePermissionSet(targetOrg: string, permissionSetName: string, cwd: string): Promise<string> {
-        return this.runSfCommand([
+    public async retrievePermissionSet(targetOrg: string, permissionSetName: string, cwd: string, outputDir?: string): Promise<string> {
+        const args = [
             'project',
             'retrieve',
             'start',
@@ -129,7 +129,13 @@ export class OrgService {
             '--target-org',
             targetOrg,
             '--json'
-        ], cwd);
+        ];
+
+        if (outputDir) {
+            args.push('--output-dir', outputDir);
+        }
+
+        return this.runSfCommand(args, cwd);
     }
 
     public async retrieveManifest(targetOrg: string, manifestPath: string, cwd: string): Promise<string> {
