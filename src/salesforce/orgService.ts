@@ -1,4 +1,4 @@
-import { execFile } from 'child_process';
+import { exec, execFile } from 'child_process';
 import * as vscode from 'vscode';
 
 export interface SalesforceOrg {
@@ -185,35 +185,70 @@ export class OrgService {
         this.cliOutputChannel.appendLine(`[${new Date().toISOString()}] cwd: ${cwd ?? process.cwd()}`);
         this.cliOutputChannel.appendLine(`[${new Date().toISOString()}] command: ${commandText}`);
 
-        return new Promise((resolve, reject) => {
-            execFile(executable, args, { cwd }, (error, stdout, stderr) => {
-                if (stdout) {
-                    this.cliOutputChannel.appendLine('--- stdout ---');
-                    this.cliOutputChannel.appendLine(stdout);
-                }
+        return process.platform === 'win32'
+            ? this.runWindowsCommand(commandText, cwd)
+            : this.runFileCommand(executable, args, cwd);
+    }
 
-                if (stderr) {
-                    this.cliOutputChannel.appendLine('--- stderr ---');
-                    this.cliOutputChannel.appendLine(stderr);
-                }
+    private runWindowsCommand(commandText: string, cwd?: string): Promise<string> {
+        return new Promise((resolve, reject) => {
+            exec(commandText, { cwd }, (error, stdout, stderr) => {
+                this.logCommandResult(stdout, stderr);
 
                 if (error) {
-                    this.cliOutputChannel.appendLine('--- error ---');
-                    this.cliOutputChannel.appendLine(error.message);
-                    this.cliOutputChannel.show(true);
+                    this.logCommandError(error.message);
                     reject(new Error(stderr || stdout || error.message));
                     return;
                 }
 
-                this.cliOutputChannel.appendLine('--- success ---');
-                this.cliOutputChannel.appendLine('');
+                this.logCommandSuccess();
                 resolve(stdout);
             });
         });
     }
 
+    private runFileCommand(executable: string, args: string[], cwd?: string): Promise<string> {
+        return new Promise((resolve, reject) => {
+            execFile(executable, args, { cwd }, (error, stdout, stderr) => {
+                this.logCommandResult(stdout, stderr);
+
+                if (error) {
+                    this.logCommandError(error.message);
+                    reject(new Error(stderr || stdout || error.message));
+                    return;
+                }
+
+                this.logCommandSuccess();
+                resolve(stdout);
+            });
+        });
+    }
+
+    private logCommandResult(stdout: string, stderr: string): void {
+        if (stdout) {
+            this.cliOutputChannel.appendLine('--- stdout ---');
+            this.cliOutputChannel.appendLine(stdout);
+        }
+
+        if (stderr) {
+            this.cliOutputChannel.appendLine('--- stderr ---');
+            this.cliOutputChannel.appendLine(stderr);
+        }
+    }
+
+    private logCommandError(message: string): void {
+        this.cliOutputChannel.appendLine('--- error ---');
+        this.cliOutputChannel.appendLine(message);
+        this.cliOutputChannel.show(true);
+    }
+
+    private logCommandSuccess(): void {
+        this.cliOutputChannel.appendLine('--- success ---');
+        this.cliOutputChannel.appendLine('');
+    }
+
     private formatArg(arg: string): string {
-        return /\s/.test(arg) ? `"${arg}"` : arg;
+        return /\s/.test(arg) ? `"${arg.replace(/"/g, '\\"')}"` : arg;
     }
 
     private getSfExecutableName(): string {
