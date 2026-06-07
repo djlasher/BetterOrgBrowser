@@ -15,6 +15,12 @@ export function activate(context: vscode.ExtensionContext): void {
         provider
     );
 
+    const getManifestMemberName = (node: MetadataNode): string => {
+        return node.parentApiName && node.packageXmlType === 'CustomField'
+            ? `${node.parentApiName}.${node.apiName}`
+            : node.apiName ?? node.label;
+    };
+
     const refreshCommand = vscode.commands.registerCommand(
         'betterOrgBrowser.refresh',
         () => {
@@ -119,15 +125,88 @@ export function activate(context: vscode.ExtensionContext): void {
                 return;
             }
 
-            const memberName = node.parentApiName && node.packageXmlType === 'CustomField'
-                ? `${node.parentApiName}.${node.apiName}`
-                : node.apiName ?? node.label;
+            const memberName = getManifestMemberName(node);
 
             packageXmlBuilder.add(node.packageXmlType, memberName);
 
             vscode.window.showInformationMessage(
                 `Added ${memberName} to package.xml selections (${packageXmlBuilder.getCount()} total)`
             );
+        }
+    );
+
+    const removeFromManifestCommand = vscode.commands.registerCommand(
+        'betterOrgBrowser.removeFromManifest',
+        async (node: MetadataNode) => {
+            if (!node?.packageXmlType) {
+                vscode.window.showWarningMessage('This metadata item cannot be removed from package.xml yet.');
+                return;
+            }
+
+            const memberName = getManifestMemberName(node);
+            const removed = packageXmlBuilder.remove(node.packageXmlType, memberName);
+
+            if (!removed) {
+                vscode.window.showInformationMessage(`${memberName} was not in package.xml selections.`);
+                return;
+            }
+
+            vscode.window.showInformationMessage(
+                `Removed ${memberName} from package.xml selections (${packageXmlBuilder.getCount()} total)`
+            );
+        }
+    );
+
+    const clearManifestSelectionsCommand = vscode.commands.registerCommand(
+        'betterOrgBrowser.clearManifestSelections',
+        async () => {
+            const count = packageXmlBuilder.getCount();
+
+            if (count === 0) {
+                vscode.window.showInformationMessage('No package.xml selections to clear.');
+                return;
+            }
+
+            const choice = await vscode.window.showWarningMessage(
+                `Clear ${count} package.xml selection${count === 1 ? '' : 's'}?`,
+                { modal: true },
+                'Clear Selections'
+            );
+
+            if (choice !== 'Clear Selections') {
+                return;
+            }
+
+            packageXmlBuilder.clear();
+            vscode.window.showInformationMessage('Cleared package.xml selections.');
+        }
+    );
+
+    const showManifestSelectionsCommand = vscode.commands.registerCommand(
+        'betterOrgBrowser.showManifestSelections',
+        async () => {
+            const selections = packageXmlBuilder.getSelections();
+
+            if (selections.length === 0) {
+                vscode.window.showInformationMessage('No package.xml selections yet.');
+                return;
+            }
+
+            const lines = [
+                '# Package XML Selections',
+                '',
+                `Total selections: ${selections.length}`,
+                '',
+                ...selections.map((selection) => `- ${selection.type}: ${selection.member}`),
+                ''
+            ];
+
+            const document = await vscode.workspace.openTextDocument({
+                content: lines.join('\n'),
+                language: 'markdown'
+            });
+
+            await vscode.window.showTextDocument(document, { preview: false });
         }
     );
 
@@ -232,6 +311,9 @@ export function activate(context: vscode.ExtensionContext): void {
         showFieldDetailsCommand,
         copyApiNameCommand,
         addToManifestCommand,
+        removeFromManifestCommand,
+        clearManifestSelectionsCommand,
+        showManifestSelectionsCommand,
         previewManifestCommand,
         writeManifestCommand,
         retrieveManifestCommand
