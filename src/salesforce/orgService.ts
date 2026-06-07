@@ -147,10 +147,10 @@ export class OrgService {
             `PermissionSet:${permissionSetName}`,
             '--target-org',
             targetOrg,
+            '--single-package',
             '--target-metadata-dir',
             targetMetadataDir,
-            '--unzip',
-            '--single-package'
+            '--unzip'
         ], cwd);
     }
 
