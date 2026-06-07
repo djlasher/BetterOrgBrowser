@@ -95,6 +95,9 @@ export class MetadataProvider implements vscode.TreeDataProvider<MetadataNode> {
             case 'PermissionSetRoot':
                 return this.getPermissionSets();
 
+            case 'PermissionSet':
+                return this.getPermissionSetFolders(element.apiName);
+
             default:
                 return [];
         }
@@ -210,7 +213,7 @@ export class MetadataProvider implements vscode.TreeDataProvider<MetadataNode> {
             return permissionSets.map((permissionSet: MetadataListItem) =>
                 new MetadataNode(
                     permissionSet.fullName,
-                    vscode.TreeItemCollapsibleState.None,
+                    vscode.TreeItemCollapsibleState.Collapsed,
                     permissionSet.type ?? 'PermissionSet',
                     permissionSet.fullName,
                     undefined,
@@ -221,6 +224,28 @@ export class MetadataProvider implements vscode.TreeDataProvider<MetadataNode> {
         } catch (error) {
             return this.getErrorMessage(error, 'Permission Set metadata');
         }
+    }
+
+    private getPermissionSetFolders(permissionSetApiName?: string): MetadataNode[] {
+        const folders = [
+            'Object Permissions',
+            'Field Permissions',
+            'Apex Class Access',
+            'Flow Access',
+            'Custom Permissions',
+            'Tab Settings',
+            'User Permissions'
+        ];
+
+        return folders.map((folder) =>
+            new MetadataNode(
+                folder,
+                vscode.TreeItemCollapsibleState.Collapsed,
+                'PermissionSetFolder',
+                undefined,
+                permissionSetApiName
+            )
+        );
     }
 
     private getSelectOrgMessage(): MetadataNode[] {
