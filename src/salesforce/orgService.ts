@@ -149,7 +149,8 @@ export class OrgService {
             targetOrg,
             '--target-metadata-dir',
             targetMetadataDir,
-            '--unzip'
+            '--unzip',
+            '--single-package'
         ], cwd);
     }
 
