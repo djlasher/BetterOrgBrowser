@@ -149,8 +149,7 @@ export class OrgService {
             targetOrg,
             '--target-metadata-dir',
             targetMetadataDir,
-            '--unzip',
-            '--json'
+            '--unzip'
         ], cwd);
     }
 
