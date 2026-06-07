@@ -92,6 +92,9 @@ export class MetadataProvider implements vscode.TreeDataProvider<MetadataNode> {
             case 'FlowRoot':
                 return this.getFlows();
 
+            case 'PermissionSetRoot':
+                return this.getPermissionSets();
+
             default:
                 return [];
         }
@@ -193,6 +196,30 @@ export class MetadataProvider implements vscode.TreeDataProvider<MetadataNode> {
             );
         } catch (error) {
             return this.getErrorMessage(error, 'Flow metadata');
+        }
+    }
+
+    private async getPermissionSets(): Promise<MetadataNode[]> {
+        if (!this.selectedOrgTarget) {
+            return this.getSelectOrgMessage();
+        }
+
+        try {
+            const permissionSets = await this.orgService.listPermissionSets(this.selectedOrgTarget);
+
+            return permissionSets.map((permissionSet: MetadataListItem) =>
+                new MetadataNode(
+                    permissionSet.fullName,
+                    vscode.TreeItemCollapsibleState.None,
+                    permissionSet.type ?? 'PermissionSet',
+                    permissionSet.fullName,
+                    undefined,
+                    undefined,
+                    'PermissionSet'
+                )
+            );
+        } catch (error) {
+            return this.getErrorMessage(error, 'Permission Set metadata');
         }
     }
 
