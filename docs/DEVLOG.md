@@ -4,6 +4,34 @@ Session-based development history for BetterOrgBrowser.
 
 Use versions instead of dates. Keep this to one entry per work session.
 
+## v0.0.3 - Persistence And Status UX
+
+### Completed
+
+- Added workspace-state persistence for manifest selections.
+- Added workspace-state persistence for selected Salesforce org.
+- Added manifest selection restore on extension activation.
+- Added selected org restore on extension activation.
+- Added live manifest selection status bar counter.
+- Added clickable status bar shortcut to Show Manifest Selections.
+- Added helper storage modules:
+  - `manifestSelectionStore.ts`
+  - `selectedOrgStore.ts`
+
+### Current Gaps
+
+- No dedicated Manifest Selections tree section yet.
+- No visual selected-state indicator on metadata nodes.
+- Retrieve results still display raw JSON.
+- Permission Sets are still placeholder-only.
+
+### Next Focus
+
+- Improve retrieve result formatting.
+- Add output channel logging.
+- Begin Permission Set implementation.
+- Refactor large `extension.ts` into smaller modules.
+
 ## v0.0.2 - Manifest Selection UX Commands
 
 ### Completed
@@ -18,7 +46,6 @@ Use versions instead of dates. Keep this to one entry per work session.
 
 ### Current Gaps
 
-- Manifest selections are still in memory only.
 - No dedicated Manifest Selections tree section yet.
 - Remove from Manifest does not visually indicate whether a node is already selected.
 
@@ -27,35 +54,3 @@ Use versions instead of dates. Keep this to one entry per work session.
 - Persist manifest selections with workspace state.
 - Add visible manifest selection count.
 - Consider adding a Manifest Selections tree node.
-
-## v0.0.1 - Extension Foundation And Live Metadata MVP
-
-### Completed
-
-- Created TypeScript VS Code extension scaffold.
-- Added Better Org Browser activity bar container.
-- Added metadata explorer tree view.
-- Added Salesforce CLI integration.
-- Added org selection through QuickPick.
-- Added live browsing for Apex Classes, Flows, Custom Objects, and Object Fields.
-- Added field detail inspection.
-- Added Copy API Name.
-- Added Add to Manifest.
-- Added package.xml generation.
-- Added manifest preview and write commands.
-- Added retrieve command through Salesforce CLI.
-- Successfully tested retrieval in a separate SFDX test project.
-
-### Current Gaps
-
-- Manifest selections are not visible enough yet.
-- Manifest selections are not persisted yet.
-- Permission Sets are still placeholder-only.
-- Retrieve output is still raw JSON.
-- No caching or dependency analysis yet.
-
-### Next Focus
-
-- Improve manifest selection UX.
-- Add clear, show, and remove selection commands.
-- Add better retrieve summaries.
