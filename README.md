@@ -1,8 +1,8 @@
 # BetterOrgBrowser
 
-A VS Code extension concept for a more granular Salesforce org browser.
+A VS Code extension for a more granular Salesforce org browser.
 
-The goal is to make Salesforce metadata exploration and retrieval feel closer to a purpose-built developer tool than a flat metadata list. Instead of only browsing broad metadata types, BetterOrgBrowser is intended to let developers drill into nested metadata, select exactly what they need, and eventually generate deployment/retrieval manifests with better dependency awareness.
+BetterOrgBrowser is intended to make Salesforce metadata exploration and retrieval feel closer to a purpose-built developer tool than a flat metadata list. Instead of only browsing broad metadata types, BetterOrgBrowser lets developers drill into nested metadata, select exactly what they need, generate manifests, and sync granular Permission Set entries into a local working copy.
 
 ## Why this exists
 
@@ -13,36 +13,64 @@ BetterOrgBrowser is intended to help with:
 - Tree-based exploration of Salesforce metadata.
 - Granular selection of nested metadata components.
 - Package.xml generation from selected items.
+- One-click sync of selected Permission Set entries into local Permission Set XML.
 - Optional dependency inclusion.
 - Future dependency and impact analysis.
 - Faster workflows in very large Salesforce orgs.
 
 ## MVP vision
 
-The first working version should focus on a narrow but valuable slice:
+The first working version focuses on a narrow but valuable slice:
 
 1. Add a VS Code sidebar view named **Better Org Browser**.
-2. Detect the currently authorized Salesforce org from the local Salesforce CLI project context.
-3. Display top-level metadata categories.
+2. Select and persist a Salesforce org from locally authorized Salesforce CLI orgs.
+3. Display live metadata categories.
 4. Expand common metadata types such as objects, fields, Apex classes, flows, and permission sets.
 5. Allow selecting metadata nodes for retrieval.
 6. Generate a `package.xml` from selected items.
-
-## Stretch goals
-
-- Include dependencies automatically or on demand.
-- Compare selected metadata against the local project.
-- Build package.xml files from saved selection sets.
-- Add permission set drilldown for object, field, class, Apex, Flow, and custom permission access.
-- Add object-level drilldown for fields, validation rules, record types, compact layouts, list views, and field sets.
-- Add Flow dependency visualization.
-- Add org-size-aware caching for giant enterprise orgs.
+7. Retrieve metadata from a generated manifest.
+8. Browse remote Permission Set internals and sync selected entries into the local working copy.
 
 ## Current project status
 
-This repo currently contains the initial TypeScript VS Code extension scaffold.
+The extension currently has a working end-to-end MVP flow in the VS Code Extension Development Host.
 
-The extension activates, registers a sidebar tree view, and displays placeholder metadata nodes so the project can be opened and run immediately in the VS Code Extension Development Host.
+Confirmed working:
+
+- Salesforce org picker.
+- Persisted selected org.
+- Live browsing for Apex Classes, Flows, Custom Objects, Object Fields, and Permission Sets.
+- Field details inspection.
+- Copy API Name.
+- Add/Remove/Clear/Show Manifest Selections.
+- Persisted manifest selections.
+- Preview and write `manifest/package.xml`.
+- Retrieve Manifest with a friendly summary.
+- Salesforce CLI output logging.
+- Permission Set deep browser shell.
+- Parsed Permission Set Object Permissions.
+- Parsed Permission Set Field Permissions.
+- Inline Sync Field Permission Entry command.
+
+The most important differentiator currently working is:
+
+```text
+Git has a trimmed Permission Set
+→ org has the full Permission Set
+→ browse remote Field Permissions
+→ click sync on one field permission
+→ local Permission Set XML receives only that one fieldPermissions block
+```
+
+This keeps Git diffs small and avoids manually copying Permission Set XML from a full retrieve.
+
+## Known follow-up items
+
+- Synced Field Permission entries currently append near the bottom before the closing PermissionSet tag; later they should be inserted in sorted/stable order with existing field permissions.
+- Object Permission sync should be added using the same pattern.
+- `extension.ts` should be modularized into smaller command/service files.
+- Remote Permission Set XML should be cached during a session to avoid repeated retrieves.
+- More Permission Set folders should be parsed: Apex Class Access, Flow Access, Custom Permissions, Tab Settings, and User Permissions.
 
 ## Getting started
 
@@ -77,29 +105,38 @@ Open the Activity Bar view named **Better Org Browser**.
 
 ## Suggested local prerequisites
 
-For the future Salesforce integration work, install and authenticate with Salesforce CLI:
+Install and authenticate with Salesforce CLI:
 
 ```bash
 sf org login web --alias my-dev-org
 sf org list
 ```
 
-The current scaffold does not call Salesforce CLI yet.
+For retrieve and Permission Set sync testing, open a separate Salesforce DX project in the Extension Development Host. Keep this extension repo as a VS Code extension repo, not an SFDX project.
 
 ## Folder structure
 
 ```text
 .
-├── .vscode/                 # VS Code launch/tasks config
+├── .vscode/                    # VS Code launch/tasks config
+├── docs/
+│   ├── ROADMAP.md              # Project roadmap and next priorities
+│   └── SESSION_NOTES.md        # Current state for resuming work
 ├── src/
-│   ├── extension.ts          # Extension activation entry point
+│   ├── extension.ts            # Extension activation and command registration
 │   ├── metadata/
-│   │   ├── metadataNode.ts   # Tree node model
+│   │   ├── metadataNode.ts     # Tree node model
 │   │   └── metadataProvider.ts # Tree data provider
+│   ├── packageXml/
+│   │   ├── manifestSelectionStore.ts
+│   │   └── packageXmlBuilder.ts
 │   └── salesforce/
-│       └── orgService.ts     # Future Salesforce CLI / Metadata API wrapper
-├── package.json              # VS Code extension manifest
-├── tsconfig.json             # TypeScript compiler config
+│       ├── orgService.ts
+│       ├── permissionSetParser.ts
+│       ├── retrieveResultFormatter.ts
+│       └── selectedOrgStore.ts
+├── package.json                # VS Code extension manifest
+├── tsconfig.json               # TypeScript compiler config
 └── README.md
 ```
 
@@ -109,11 +146,12 @@ This extension is intentionally being built in TypeScript because VS Code extens
 
 Recommended next implementation steps:
 
-1. Add a Salesforce CLI wrapper that can call `sf org display --json`.
-2. Add an org picker command.
-3. Cache metadata describe/list results locally.
-4. Replace placeholder tree nodes with real metadata type results.
-5. Add right-click commands for `Retrieve`, `Add to package.xml`, and `Copy metadata name`.
+1. Add sorted/stable insertion for synced Field Permission entries.
+2. Add Sync Object Permission Entry.
+3. Refactor `extension.ts` into smaller modules.
+4. Add remote Permission Set XML caching.
+5. Fill more Permission Set folders.
+6. Add right-click and inline commands for selected metadata retrieval.
 
 ## License
 
