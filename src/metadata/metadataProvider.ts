@@ -243,7 +243,7 @@ export class MetadataProvider implements vscode.TreeDataProvider<MetadataNode> {
     }
 
     private async findAnyPermissionSetFile(root: vscode.Uri): Promise<vscode.Uri> {
-        const found = await this.findFileBySuffix(root, '.permissionset-meta.xml');
+        const found = await this.findFileBySuffix(root, ['.permissionset-meta.xml', '.permissionset']);
 
         if (!found) {
             throw new Error('Could not find any retrieved permission set file.');
@@ -252,18 +252,18 @@ export class MetadataProvider implements vscode.TreeDataProvider<MetadataNode> {
         return found;
     }
 
-    private async findFileBySuffix(root: vscode.Uri, suffix: string): Promise<vscode.Uri | undefined> {
+    private async findFileBySuffix(root: vscode.Uri, suffixes: string[]): Promise<vscode.Uri | undefined> {
         const entries = await vscode.workspace.fs.readDirectory(root);
 
         for (const [name, type] of entries) {
             const child = vscode.Uri.joinPath(root, name);
 
-            if (type === vscode.FileType.File && name.endsWith(suffix)) {
+            if (type === vscode.FileType.File && suffixes.some((suffix) => name.endsWith(suffix))) {
                 return child;
             }
 
             if (type === vscode.FileType.Directory) {
-                const found = await this.findFileBySuffix(child, suffix);
+                const found = await this.findFileBySuffix(child, suffixes);
 
                 if (found) {
                     return found;
