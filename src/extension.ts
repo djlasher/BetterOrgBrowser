@@ -49,8 +49,37 @@ export function activate(context: vscode.ExtensionContext): void {
     const getPermissionSetFile = (root: vscode.Uri, permissionSetApiName: string): vscode.Uri =>
         vscode.Uri.joinPath(root, 'force-app', 'main', 'default', 'permissionsets', `${permissionSetApiName}.permissionset-meta.xml`);
 
-    const getTempPermissionSetFile = (tempRoot: vscode.Uri, permissionSetApiName: string): vscode.Uri =>
-        vscode.Uri.joinPath(tempRoot, 'force-app', 'main', 'default', 'permissionsets', `${permissionSetApiName}.permissionset-meta.xml`);
+    const findFileBySuffix = async (root: vscode.Uri, suffixes: string[]): Promise<vscode.Uri | undefined> => {
+        const entries = await vscode.workspace.fs.readDirectory(root);
+
+        for (const [name, type] of entries) {
+            const child = vscode.Uri.joinPath(root, name);
+
+            if (type === vscode.FileType.File && suffixes.some((suffix) => name.endsWith(suffix))) {
+                return child;
+            }
+
+            if (type === vscode.FileType.Directory) {
+                const found = await findFileBySuffix(child, suffixes);
+
+                if (found) {
+                    return found;
+                }
+            }
+        }
+
+        return undefined;
+    };
+
+    const findAnyPermissionSetFile = async (root: vscode.Uri): Promise<vscode.Uri> => {
+        const found = await findFileBySuffix(root, ['.permissionset-meta.xml', '.permissionset']);
+
+        if (!found) {
+            throw new Error('Could not find retrieved permission set file.');
+        }
+
+        return found;
+    };
 
     const refreshCommand = vscode.commands.registerCommand('betterOrgBrowser.refresh', () => {
         provider.refresh();
@@ -231,7 +260,7 @@ export function activate(context: vscode.ExtensionContext): void {
 
         const root = folders[0].uri;
         const permissionSetFile = getPermissionSetFile(root, permissionSetApiName);
-        const tempRoot = vscode.Uri.joinPath(context.globalStorageUri, 'permission-sync', `${permissionSetApiName}-${Date.now()}`);
+        const tempRoot = vscode.Uri.joinPath(root, '.better-org-browser', 'permission-sync', `${permissionSetApiName}-${Date.now()}`);
 
         try {
             await vscode.window.withProgress(
@@ -241,9 +270,9 @@ export function activate(context: vscode.ExtensionContext): void {
                     const localXml = Buffer.from(localBytes).toString('utf8');
 
                     await vscode.workspace.fs.createDirectory(tempRoot);
-                    await orgService.retrievePermissionSet(targetOrg, permissionSetApiName, root.fsPath, tempRoot.fsPath);
+                    await orgService.retrievePermissionSetMetadataFormat(targetOrg, permissionSetApiName, root.fsPath, tempRoot.fsPath);
 
-                    const remotePermissionSetFile = getTempPermissionSetFile(tempRoot, permissionSetApiName);
+                    const remotePermissionSetFile = await findAnyPermissionSetFile(tempRoot);
                     const remoteBytes = await vscode.workspace.fs.readFile(remotePermissionSetFile);
                     const remoteXml = Buffer.from(remoteBytes).toString('utf8');
                     const remoteBlock = findFieldPermissionBlock(remoteXml, fieldName);
