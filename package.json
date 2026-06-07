@@ -92,12 +92,12 @@
       "view/item/context": [
         {
           "command": "betterOrgBrowser.addToManifest",
-          "when": "view == betterOrgBrowserView && viewItem =~ /^(ApexClass|Flow|CustomObject|string|picklist|currency|address|double|textarea|reference|datetime|boolean|date|int|id|phone|email|url|percent|multipicklist|encryptedstring)$/",
+          "when": "view == betterOrgBrowserView && viewItem =~ /^(ApexClass|Flow|CustomObject|PermissionSet|string|picklist|currency|address|double|textarea|reference|datetime|boolean|date|int|id|phone|email|url|percent|multipicklist|encryptedstring)$/",
           "group": "navigation@1"
         },
         {
           "command": "betterOrgBrowser.removeFromManifest",
-          "when": "view == betterOrgBrowserView && viewItem =~ /^(ApexClass|Flow|CustomObject|string|picklist|currency|address|double|textarea|reference|datetime|boolean|date|int|id|phone|email|url|percent|multipicklist|encryptedstring)$/",
+          "when": "view == betterOrgBrowserView && viewItem =~ /^(ApexClass|Flow|CustomObject|PermissionSet|string|picklist|currency|address|double|textarea|reference|datetime|boolean|date|int|id|phone|email|url|percent|multipicklist|encryptedstring)$/",
           "group": "navigation@2"
         },
         {
