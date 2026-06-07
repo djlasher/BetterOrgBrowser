@@ -14,6 +14,22 @@ export class PackageXmlBuilder {
         this.selections.get(type)?.add(member);
     }
 
+    remove(type: string, member: string): boolean {
+        const members = this.selections.get(type);
+
+        if (!members) {
+            return false;
+        }
+
+        const removed = members.delete(member);
+
+        if (members.size === 0) {
+            this.selections.delete(type);
+        }
+
+        return removed;
+    }
+
     clear(): void {
         this.selections.clear();
     }
@@ -21,6 +37,20 @@ export class PackageXmlBuilder {
     getCount(): number {
         return [...this.selections.values()]
             .reduce((count, members) => count + members.size, 0);
+    }
+
+    getSelections(): PackageXmlMember[] {
+        return [...this.selections.entries()]
+            .sort(([typeA], [typeB]) => typeA.localeCompare(typeB))
+            .flatMap(([type, members]) =>
+                [...members]
+                    .sort((a, b) => a.localeCompare(b))
+                    .map((member) => ({ type, member }))
+            );
+    }
+
+    contains(type: string, member: string): boolean {
+        return this.selections.get(type)?.has(member) ?? false;
     }
 
     build(apiVersion = '66.0'): string {
