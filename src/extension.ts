@@ -4,14 +4,20 @@ import { MetadataNode } from './metadata/metadataNode';
 import { PackageXmlBuilder } from './packageXml/packageXmlBuilder';
 import { loadManifestSelections, saveManifestSelections } from './packageXml/manifestSelectionStore';
 import { OrgService, SalesforceOrg } from './salesforce/orgService';
+import { loadSelectedOrg, saveSelectedOrg } from './salesforce/selectedOrgStore';
 
 export function activate(context: vscode.ExtensionContext): void {
     const provider = new MetadataProvider();
     const orgService = new OrgService();
     const packageXmlBuilder = new PackageXmlBuilder();
-    let selectedOrgTarget: string | undefined;
+    const savedSelectedOrg = loadSelectedOrg(context);
+    let selectedOrgTarget: string | undefined = savedSelectedOrg?.target;
 
     packageXmlBuilder.replaceSelections(loadManifestSelections(context));
+
+    if (savedSelectedOrg) {
+        provider.setSelectedOrg(savedSelectedOrg.label, savedSelectedOrg.target);
+    }
 
     const saveSelections = async (): Promise<void> => {
         await saveManifestSelections(context, packageXmlBuilder.getSelections());
@@ -65,6 +71,10 @@ export function activate(context: vscode.ExtensionContext): void {
                 }
 
                 selectedOrgTarget = orgService.getOrgTargetName(selected.org);
+                await saveSelectedOrg(context, {
+                    label: selected.label,
+                    target: selectedOrgTarget
+                });
 
                 provider.setSelectedOrg(
                     selected.label,
