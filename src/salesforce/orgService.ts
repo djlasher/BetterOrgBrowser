@@ -97,6 +97,10 @@ export class OrgService {
         return this.listMetadata(targetOrg, 'Flow');
     }
 
+    public async listPermissionSets(targetOrg: string): Promise<MetadataListItem[]> {
+        return this.listMetadata(targetOrg, 'PermissionSet');
+    }
+
     public async describeSObject(targetOrg: string, objectApiName: string): Promise<SObjectField[]> {
         const output = await this.runSfCommand([
             'sobject',
