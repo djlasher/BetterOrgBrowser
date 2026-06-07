@@ -49,6 +49,9 @@ export function activate(context: vscode.ExtensionContext): void {
     const getPermissionSetFile = (root: vscode.Uri, permissionSetApiName: string): vscode.Uri =>
         vscode.Uri.joinPath(root, 'force-app', 'main', 'default', 'permissionsets', `${permissionSetApiName}.permissionset-meta.xml`);
 
+    const getTempPermissionSetFile = (tempRoot: vscode.Uri, permissionSetApiName: string): vscode.Uri =>
+        vscode.Uri.joinPath(tempRoot, 'force-app', 'main', 'default', 'permissionsets', `${permissionSetApiName}.permissionset-meta.xml`);
+
     const refreshCommand = vscode.commands.registerCommand('betterOrgBrowser.refresh', () => {
         provider.refresh();
     });
@@ -63,11 +66,7 @@ export function activate(context: vscode.ExtensionContext): void {
             }
 
             const selected = await vscode.window.showQuickPick(
-                orgs.map((org: SalesforceOrg) => ({
-                    label: orgService.getOrgDisplayName(org),
-                    description: org.instanceUrl,
-                    org
-                })),
+                orgs.map((org: SalesforceOrg) => ({ label: orgService.getOrgDisplayName(org), description: org.instanceUrl, org })),
                 { placeHolder: 'Select a Salesforce org' }
             );
 
@@ -232,20 +231,20 @@ export function activate(context: vscode.ExtensionContext): void {
 
         const root = folders[0].uri;
         const permissionSetFile = getPermissionSetFile(root, permissionSetApiName);
+        const tempRoot = vscode.Uri.joinPath(context.globalStorageUri, 'permission-sync', `${permissionSetApiName}-${Date.now()}`);
 
         try {
             await vscode.window.withProgress(
-                {
-                    location: vscode.ProgressLocation.Notification,
-                    title: `Syncing ${fieldName}`,
-                    cancellable: false
-                },
+                { location: vscode.ProgressLocation.Notification, title: `Syncing ${fieldName}`, cancellable: false },
                 async () => {
                     const localBytes = await vscode.workspace.fs.readFile(permissionSetFile);
                     const localXml = Buffer.from(localBytes).toString('utf8');
 
-                    await orgService.retrievePermissionSet(targetOrg, permissionSetApiName, root.fsPath);
-                    const remoteBytes = await vscode.workspace.fs.readFile(permissionSetFile);
+                    await vscode.workspace.fs.createDirectory(tempRoot);
+                    await orgService.retrievePermissionSet(targetOrg, permissionSetApiName, root.fsPath, tempRoot.fsPath);
+
+                    const remotePermissionSetFile = getTempPermissionSetFile(tempRoot, permissionSetApiName);
+                    const remoteBytes = await vscode.workspace.fs.readFile(remotePermissionSetFile);
                     const remoteXml = Buffer.from(remoteBytes).toString('utf8');
                     const remoteBlock = findFieldPermissionBlock(remoteXml, fieldName);
 
