@@ -3,8 +3,10 @@ import { MetadataProvider } from './metadata/metadataProvider';
 import { MetadataNode } from './metadata/metadataNode';
 import { PackageXmlBuilder } from './packageXml/packageXmlBuilder';
 import { OrgService, SalesforceOrg } from './salesforce/orgService';
+import { manifestSelectionStorageKey } from './packageXml/manifestSelectionStore';
 
 export function activate(context: vscode.ExtensionContext): void {
+    console.log(manifestSelectionStorageKey);
     const provider = new MetadataProvider();
     const orgService = new OrgService();
     const packageXmlBuilder = new PackageXmlBuilder();
