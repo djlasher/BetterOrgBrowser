@@ -2,15 +2,20 @@ import * as vscode from 'vscode';
 import { MetadataProvider } from './metadata/metadataProvider';
 import { MetadataNode } from './metadata/metadataNode';
 import { PackageXmlBuilder } from './packageXml/packageXmlBuilder';
+import { loadManifestSelections, saveManifestSelections } from './packageXml/manifestSelectionStore';
 import { OrgService, SalesforceOrg } from './salesforce/orgService';
-import { manifestSelectionStorageKey } from './packageXml/manifestSelectionStore';
 
 export function activate(context: vscode.ExtensionContext): void {
-    console.log(manifestSelectionStorageKey);
     const provider = new MetadataProvider();
     const orgService = new OrgService();
     const packageXmlBuilder = new PackageXmlBuilder();
     let selectedOrgTarget: string | undefined;
+
+    packageXmlBuilder.replaceSelections(loadManifestSelections(context));
+
+    const saveSelections = async (): Promise<void> => {
+        await saveManifestSelections(context, packageXmlBuilder.getSelections());
+    };
 
     vscode.window.registerTreeDataProvider(
         'betterOrgBrowserView',
@@ -130,6 +135,7 @@ export function activate(context: vscode.ExtensionContext): void {
             const memberName = getManifestMemberName(node);
 
             packageXmlBuilder.add(node.packageXmlType, memberName);
+            await saveSelections();
 
             vscode.window.showInformationMessage(
                 `Added ${memberName} to package.xml selections (${packageXmlBuilder.getCount()} total)`
@@ -152,6 +158,8 @@ export function activate(context: vscode.ExtensionContext): void {
                 vscode.window.showInformationMessage(`${memberName} was not in package.xml selections.`);
                 return;
             }
+
+            await saveSelections();
 
             vscode.window.showInformationMessage(
                 `Removed ${memberName} from package.xml selections (${packageXmlBuilder.getCount()} total)`
@@ -180,6 +188,7 @@ export function activate(context: vscode.ExtensionContext): void {
             }
 
             packageXmlBuilder.clear();
+            await saveSelections();
             vscode.window.showInformationMessage('Cleared package.xml selections.');
         }
     );
