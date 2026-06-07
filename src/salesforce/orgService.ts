@@ -138,6 +138,22 @@ export class OrgService {
         return this.runSfCommand(args, cwd);
     }
 
+    public async retrievePermissionSetMetadataFormat(targetOrg: string, permissionSetName: string, cwd: string, targetMetadataDir: string): Promise<string> {
+        return this.runSfCommand([
+            'project',
+            'retrieve',
+            'start',
+            '--metadata',
+            `PermissionSet:${permissionSetName}`,
+            '--target-org',
+            targetOrg,
+            '--target-metadata-dir',
+            targetMetadataDir,
+            '--unzip',
+            '--json'
+        ], cwd);
+    }
+
     public async retrieveManifest(targetOrg: string, manifestPath: string, cwd: string): Promise<string> {
         return this.runSfCommand([
             'project',
