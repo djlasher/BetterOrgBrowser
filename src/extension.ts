@@ -15,12 +15,27 @@ export function activate(context: vscode.ExtensionContext): void {
 
     packageXmlBuilder.replaceSelections(loadManifestSelections(context));
 
+    const manifestStatusBarItem = vscode.window.createStatusBarItem(
+        vscode.StatusBarAlignment.Left,
+        100
+    );
+    manifestStatusBarItem.command = 'betterOrgBrowser.showManifestSelections';
+    manifestStatusBarItem.tooltip = 'Show Better Org Browser manifest selections';
+
+    const updateManifestStatusBarItem = (): void => {
+        manifestStatusBarItem.text = `$(list-tree) Manifest: ${packageXmlBuilder.getCount()}`;
+        manifestStatusBarItem.show();
+    };
+
+    updateManifestStatusBarItem();
+
     if (savedSelectedOrg) {
         provider.setSelectedOrg(savedSelectedOrg.label, savedSelectedOrg.target);
     }
 
     const saveSelections = async (): Promise<void> => {
         await saveManifestSelections(context, packageXmlBuilder.getSelections());
+        updateManifestStatusBarItem();
     };
 
     vscode.window.registerTreeDataProvider(
@@ -327,6 +342,7 @@ export function activate(context: vscode.ExtensionContext): void {
     );
 
     context.subscriptions.push(
+        manifestStatusBarItem,
         refreshCommand,
         selectOrgCommand,
         showFieldDetailsCommand,
