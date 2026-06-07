@@ -32,6 +32,24 @@ export function parseFieldPermissions(xml: string): FieldPermission[] {
         .sort((a, b) => a.field.localeCompare(b.field));
 }
 
+export function findFieldPermissionBlock(xml: string, fieldName: string): string | undefined {
+    const blocks = xml.match(/<fieldPermissions>[\s\S]*?<\/fieldPermissions>/g) ?? [];
+
+    return blocks.find((block) => readTagValue(block, 'field') === fieldName);
+}
+
+export function mergeFieldPermissionBlock(localXml: string, remoteBlock: string, fieldName: string): string {
+    const blocks = localXml.match(/<fieldPermissions>[\s\S]*?<\/fieldPermissions>/g) ?? [];
+    const existingBlock = blocks.find((block) => readTagValue(block, 'field') === fieldName);
+    const normalizedRemoteBlock = indentBlock(remoteBlock, '    ');
+
+    if (existingBlock) {
+        return localXml.replace(existingBlock, normalizedRemoteBlock);
+    }
+
+    return localXml.replace(/\s*<\/PermissionSet>\s*$/, `\n${normalizedRemoteBlock}\n</PermissionSet>\n`);
+}
+
 function parseObjectPermissionBlock(block: string): ObjectPermission | undefined {
     const object = readTagValue(block, 'object');
 
@@ -73,4 +91,12 @@ function readTagValue(block: string, tagName: string): string | undefined {
     const match = block.match(pattern);
 
     return match?.[1]?.trim();
+}
+
+function indentBlock(block: string, indent: string): string {
+    return block
+        .trim()
+        .split(/\r?\n/)
+        .map((line) => `${indent}${line.trim()}`)
+        .join('\n');
 }
