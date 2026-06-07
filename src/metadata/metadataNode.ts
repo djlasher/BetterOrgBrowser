@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import { SObjectField } from '../salesforce/orgService';
+import { ObjectPermission } from '../salesforce/permissionSetParser';
 
 export class MetadataNode extends vscode.TreeItem {
     constructor(
@@ -9,7 +10,8 @@ export class MetadataNode extends vscode.TreeItem {
         public readonly apiName?: string,
         public readonly parentApiName?: string,
         public readonly fieldDetails?: SObjectField,
-        public readonly packageXmlType?: string
+        public readonly packageXmlType?: string,
+        public readonly objectPermission?: ObjectPermission
     ) {
         super(label, collapsibleState);
 
