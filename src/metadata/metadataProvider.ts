@@ -211,8 +211,8 @@ export class MetadataProvider implements vscode.TreeDataProvider<MetadataNode> {
         try {
             const root = folders[0].uri;
             const tempRoot = vscode.Uri.joinPath(root, '.better-org-browser', 'remote-permissions', `${permissionSetApiName}-${Date.now()}`);
-            await vscode.workspace.fs.createDirectory(tempRoot);
-            await this.orgService.retrievePermissionSet(this.selectedOrgTarget, permissionSetApiName, root.fsPath, tempRoot.fsPath);
+            await this.createTemporarySfdxProject(tempRoot);
+            await this.orgService.retrievePermissionSet(this.selectedOrgTarget, permissionSetApiName, tempRoot.fsPath);
 
             const permissionSetFile = vscode.Uri.joinPath(tempRoot, 'force-app', 'main', 'default', 'permissionsets', `${permissionSetApiName}.permissionset-meta.xml`);
             const bytes = await vscode.workspace.fs.readFile(permissionSetFile);
@@ -221,6 +221,25 @@ export class MetadataProvider implements vscode.TreeDataProvider<MetadataNode> {
         } catch (error) {
             return this.getErrorMessage(error, `Permission Set ${label}`);
         }
+    }
+
+    private async createTemporarySfdxProject(root: vscode.Uri): Promise<void> {
+        const packageFolder = vscode.Uri.joinPath(root, 'force-app', 'main', 'default');
+        const projectFile = vscode.Uri.joinPath(root, 'sfdx-project.json');
+        const projectJson = {
+            packageDirectories: [
+                {
+                    path: 'force-app',
+                    default: true
+                }
+            ],
+            name: 'better-org-browser-temp',
+            namespace: '',
+            sourceApiVersion: '60.0'
+        };
+
+        await vscode.workspace.fs.createDirectory(packageFolder);
+        await vscode.workspace.fs.writeFile(projectFile, Buffer.from(`${JSON.stringify(projectJson, null, 2)}\n`, 'utf8'));
     }
 
     private getObjectPermissionDetails(permission?: ObjectPermission): MetadataNode[] {
