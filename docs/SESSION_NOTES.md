@@ -1,274 +1,180 @@
 # BetterOrgBrowser Session Notes
 
-_Last updated: 2026-06-05_
-
 ## Purpose
 
-BetterOrgBrowser is a TypeScript VS Code extension intended to become a more granular Salesforce org browser and retrieval helper.
+BetterOrgBrowser is a TypeScript VS Code extension intended to become a granular Salesforce metadata explorer, retrieval helper, and dependency assistant for VS Code.
 
-The core idea is to improve on a flat org browser by letting a developer browse nested metadata, inspect details, select exact components, generate `package.xml`, and eventually retrieve or analyze dependencies directly from VS Code.
+Core workflow target:
 
-## Current working state
+```text
+Browse metadata
+→ inspect metadata
+→ select exact components
+→ generate package.xml
+→ retrieve metadata
+→ eventually analyze dependencies
+```
 
-The extension is functional and has been tested locally through the VS Code Extension Development Host.
+## Current Working State
 
-### Confirmed working
+The extension is functional and tested locally through the VS Code Extension Development Host.
+
+### Confirmed Working
 
 - VS Code extension scaffold in TypeScript.
-- Activity Bar container named **Better Org Browser**.
-- Tree view named **Metadata Explorer**.
-- Salesforce CLI integration through Node `child_process.execFile`.
-- Windows CLI compatibility using `sf.cmd`.
-- Org picker using:
+- Better Org Browser activity bar container.
+- Metadata Explorer tree view.
+- Salesforce CLI integration.
+- Windows `sf.cmd` compatibility.
+- Salesforce org picker.
+- Persisted selected org across reloads.
+- Live metadata browsing:
+  - Apex Classes
+  - Flows
+  - Custom Objects
+  - Object Fields
+- Dynamic field drilldown from `sf sobject describe`.
+- Right-click Show Field Details.
+- Right-click Copy API Name.
+- Add to Manifest.
+- Remove from Manifest.
+- Show Manifest Selections.
+- Clear Manifest Selections.
+- Manifest persistence across reloads.
+- package.xml generation.
+- Preview Manifest.
+- Write Manifest to File.
+- Retrieve Manifest.
+- Status bar manifest selection count.
+- Clickable manifest status bar shortcut.
 
-```bash
-sf org list --json
-```
-
-- Claygentforce Developer Edition org selected successfully.
-- Live Apex Class listing using:
-
-```bash
-sf org list metadata --metadata-type ApexClass --target-org Claygentforce --json
-```
-
-- Live Flow listing using:
-
-```bash
-sf org list metadata --metadata-type Flow --target-org Claygentforce --json
-```
-
-- Live Custom Object listing using:
-
-```bash
-sf org list metadata --metadata-type CustomObject --target-org Claygentforce --json
-```
-
-- Object field drilldown using:
-
-```bash
-sf sobject describe --sobject Account --target-org Claygentforce --json
-```
-
-- Custom Objects expand into object nodes.
-- Objects expand into a **Fields** folder.
-- Fields load dynamically from `sobject describe`.
-- Right-click **Show Field Details** works for field nodes.
-- Right-click **Copy API Name** works.
-- Right-click **Add to Manifest** works for supported nodes.
-- **Preview Manifest** generates an untitled XML document.
-- **Write Manifest to File** creates/updates:
-
-```text
-manifest/package.xml
-```
-
-- **Retrieve Manifest** backend command exists and was exposed. It runs:
-
-```bash
-sf project retrieve start --manifest manifest/package.xml --target-org <selected-org> --json
-```
-
-- Retrieval was tested successfully in a separate SFDX test project. The extension repo itself should remain a VS Code extension project, not an SFDX project.
-
-## Tested successful retrieve output
-
-A generated manifest successfully retrieved:
-
-- `Account.Active__c` as `CustomField`
-- `Account` as `CustomObject`
-- `devedapp__DeveloperEditionUtilsTest` as `ApexClass`
-
-Example retrieved paths:
-
-```text
-force-app/main/default/objects/Account/fields/Active__c.field-meta.xml
-force-app/main/default/objects/Account/Account.object-meta.xml
-force-app/main/default/classes/devedapp__DeveloperEditionUtilsTest.cls
-force-app/main/default/classes/devedapp__DeveloperEditionUtilsTest.cls-meta.xml
-```
-
-## Important implementation details
-
-### Key files
+## Important Files
 
 ```text
 src/extension.ts
 src/metadata/metadataNode.ts
 src/metadata/metadataProvider.ts
-src/salesforce/orgService.ts
 src/packageXml/packageXmlBuilder.ts
+src/packageXml/manifestSelectionStore.ts
+src/salesforce/orgService.ts
+src/salesforce/selectedOrgStore.ts
 package.json
 ```
 
-### `OrgService`
-
-`OrgService` handles Salesforce CLI calls.
-
-Important methods:
-
-- `listAuthorizedOrgs()`
-- `listMetadata(targetOrg, metadataType)`
-- `listApexClasses(targetOrg)`
-- `listFlows(targetOrg)`
-- `listCustomObjects(targetOrg)`
-- `describeSObject(targetOrg, objectApiName)`
-- `retrieveManifest(targetOrg, manifestPath, cwd)`
-
-The command runner uses:
-
-```ts
-process.platform === 'win32' ? 'sf.cmd' : 'sf'
-```
-
-and passes `shell: process.platform === 'win32'`.
-
-### `MetadataNode`
-
-`MetadataNode` now stores:
-
-- `label`
-- `metadataType`
-- `apiName`
-- `parentApiName`
-- `fieldDetails`
-- `packageXmlType`
-
-`contextValue` is currently set to `metadataType`, which means field context menu visibility depends on Salesforce field type values such as `string`, `picklist`, `reference`, etc.
-
-### `MetadataProvider`
-
-The tree currently supports:
+## Current Tree Shape
 
 ```text
-Connected Org: <selected org>
-Custom Objects
-  <ObjectApiName>
-    Fields
-      <FieldApiName>
-Apex Classes
-  <ClassName>
-Flows
-  <FlowName>
-Permission Sets
+Better Org Browser
+├── Connected Org: <org>
+├── Custom Objects
+│   └── Account
+│       └── Fields
+│           └── Active__c
+├── Apex Classes
+├── Flows
+└── Permission Sets
 ```
 
 Permission Sets are still placeholder-only.
 
-### `PackageXmlBuilder`
+## Current Manifest UX
 
-`PackageXmlBuilder` keeps an in-memory map:
+Manifest selections now support:
 
-```ts
-Map<string, Set<string>>
+- Add
+- Remove
+- Clear
+- Show
+- Persist across reloads
+- Live status bar count
+
+Status bar example:
+
+```text
+Manifest: 3
 ```
 
-It groups selected metadata by package.xml type and generates XML like:
+Clicking the status bar opens Show Manifest Selections.
 
-```xml
-<?xml version="1.0" encoding="UTF-8"?>
-<Package xmlns="http://soap.sforce.com/2006/04/metadata">
-    <types>
-        <members>Account.Active__c</members>
-        <name>CustomField</name>
-    </types>
-    <version>66.0</version>
-</Package>
+## Retrieve Command
+
+Current retrieve command:
+
+```bash
+sf project retrieve start --manifest manifest/package.xml --target-org <selected-org> --json
 ```
 
-## Current UX limitations / known issues
+Retrieve works successfully in a separate SFDX project.
 
-- Command Palette does not pass selected tree items, so node-specific commands only reliably work from right-click context menus.
-- **Show Field Details** should be considered right-click only.
-- **Copy API Name** should be considered right-click only.
-- **Add to Manifest** should be considered right-click only.
-- Manifest selections are in-memory only and reset when the extension host reloads.
-- There is no visible selection bucket yet.
-- There is no clear manifest selection command yet.
-- There is no remove-from-manifest command yet.
-- There is no manifest count display in the tree yet.
-- Retrieve output currently opens raw JSON in a new editor tab.
-- Error handling is basic.
-- No caching yet. Large orgs may be slow.
-- Custom Object drilldown currently only shows Fields.
-- Field metadata shown is basic; more describe properties are available.
-- No dependency analysis yet.
-- No package.xml write confirmation overwrite choice yet.
-- No support yet for profiles, permission sets, LWCs, tabs, FlexiPages, layouts, validation rules, record types, list views, or field sets.
+The extension repo itself should remain a VS Code extension repo and should not become an SFDX project.
 
-## Development commands
+## Development Workflow
 
-From the extension repo:
+### Compile
 
 ```bash
 npm install
 npm run compile
 ```
 
-Run extension locally:
+### Run Extension
 
 ```text
 Press F5 in VS Code
 ```
 
-In Extension Development Host:
+### Recommended Test Pattern
 
-```text
-Better Org Browser: Select Salesforce Org
-Better Org Browser: Preview Manifest
-Better Org Browser: Write Manifest to File
-Better Org Browser: Retrieve Manifest
-```
+1. Open BetterOrgBrowser extension repo.
+2. Press F5.
+3. In Extension Development Host, open separate SFDX test project.
+4. Select Salesforce org.
+5. Browse metadata.
+6. Add items to manifest.
+7. Write manifest.
+8. Retrieve manifest.
 
-Manual retrieve equivalent:
+## Known Limitations
 
-```bash
-sf project retrieve start --manifest manifest/package.xml --target-org Claygentforce
-```
+- `extension.ts` is becoming large and should be modularized.
+- Retrieve output still displays raw JSON.
+- Permission Sets are placeholder-only.
+- No dependency analysis yet.
+- No caching yet.
+- Large org performance not optimized yet.
+- No dedicated Manifest Selections tree section yet.
+- No selected-state indicator on metadata nodes.
 
-## Test setup notes
+## Immediate Next Priorities
 
-The correct pattern is:
+1. Improve retrieve result formatting.
+2. Add output channel logging.
+3. Begin Permission Set implementation.
+4. Refactor `extension.ts` into smaller modules.
+5. Add richer Custom Object drilldown.
+6. Add caching and large-org performance improvements.
 
-1. Open the BetterOrgBrowser extension repo in VS Code.
-2. Press `F5` to launch Extension Development Host.
-3. In the Extension Development Host, open a separate SFDX project folder such as `BetterOrgBrowserTest`.
-4. Use BetterOrgBrowser in that SFDX project window.
-5. Generate/write `manifest/package.xml` there.
-6. Run Retrieve Manifest from the extension or run the equivalent CLI command.
+## Mental Model For Next Session
 
-Do not convert the extension repo itself into an SFDX project.
-
-## Next best steps
-
-1. Add **Clear Manifest Selections** command.
-2. Add **Show Manifest Selections** command or tree node.
-3. Add a visible count, such as `Manifest Selections (3)`.
-4. Add **Remove from Manifest** for selected nodes.
-5. Improve retrieve result display from raw JSON to a readable summary.
-6. Add validation for SFDX project context earlier in the workflow.
-7. Add caching for metadata list calls.
-8. Add Permission Set listing.
-9. Add Custom Object subfolders beyond Fields:
-   - Record Types
-   - Validation Rules
-   - Field Sets
-   - List Views
-   - Compact Layouts
-10. Add Retrieve Selected Metadata command that does add-to-manifest, write manifest, and retrieve in one action.
-
-## Current mental model for next session
-
-The MVP has proven the full loop:
+The MVP workflow is proven end-to-end:
 
 ```text
 VS Code Extension
 → Salesforce CLI
-→ browse live org metadata
-→ inspect/copy/select exact metadata
+→ browse org metadata
+→ inspect metadata
+→ select metadata
 → generate package.xml
 → write manifest/package.xml
 → retrieve metadata into SFDX project
 ```
 
-The next session should focus on making the manifest selection workflow easier to use and less invisible.
+Next sessions should focus on:
+
+```text
+better UX
+→ better retrieve output
+→ more metadata types
+→ dependency awareness
+→ enterprise-scale performance
+```
