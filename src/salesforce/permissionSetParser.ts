@@ -8,6 +8,12 @@ export interface ObjectPermission {
     modifyAllRecords: boolean;
 }
 
+export interface FieldPermission {
+    field: string;
+    readable: boolean;
+    editable: boolean;
+}
+
 export function parseObjectPermissions(xml: string): ObjectPermission[] {
     const blocks = xml.match(/<objectPermissions>[\s\S]*?<\/objectPermissions>/g) ?? [];
 
@@ -15,6 +21,15 @@ export function parseObjectPermissions(xml: string): ObjectPermission[] {
         .map(parseObjectPermissionBlock)
         .filter((permission): permission is ObjectPermission => Boolean(permission))
         .sort((a, b) => a.object.localeCompare(b.object));
+}
+
+export function parseFieldPermissions(xml: string): FieldPermission[] {
+    const blocks = xml.match(/<fieldPermissions>[\s\S]*?<\/fieldPermissions>/g) ?? [];
+
+    return blocks
+        .map(parseFieldPermissionBlock)
+        .filter((permission): permission is FieldPermission => Boolean(permission))
+        .sort((a, b) => a.field.localeCompare(b.field));
 }
 
 function parseObjectPermissionBlock(block: string): ObjectPermission | undefined {
@@ -32,6 +47,20 @@ function parseObjectPermissionBlock(block: string): ObjectPermission | undefined
         allowDelete: readBooleanTagValue(block, 'allowDelete'),
         viewAllRecords: readBooleanTagValue(block, 'viewAllRecords'),
         modifyAllRecords: readBooleanTagValue(block, 'modifyAllRecords')
+    };
+}
+
+function parseFieldPermissionBlock(block: string): FieldPermission | undefined {
+    const field = readTagValue(block, 'field');
+
+    if (!field) {
+        return undefined;
+    }
+
+    return {
+        field,
+        readable: readBooleanTagValue(block, 'readable'),
+        editable: readBooleanTagValue(block, 'editable')
     };
 }
 
