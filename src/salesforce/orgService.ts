@@ -186,7 +186,7 @@ export class OrgService {
         this.cliOutputChannel.appendLine(`[${new Date().toISOString()}] command: ${commandText}`);
 
         return new Promise((resolve, reject) => {
-            execFile(executable, args, { shell: process.platform === 'win32', cwd }, (error, stdout, stderr) => {
+            execFile(executable, args, { cwd }, (error, stdout, stderr) => {
                 if (stdout) {
                     this.cliOutputChannel.appendLine('--- stdout ---');
                     this.cliOutputChannel.appendLine(stdout);
