@@ -3,6 +3,7 @@ import { MetadataProvider } from './metadata/metadataProvider';
 import { MetadataNode } from './metadata/metadataNode';
 import { PackageXmlBuilder } from './packageXml/packageXmlBuilder';
 import { loadManifestSelections, saveManifestSelections } from './packageXml/manifestSelectionStore';
+import { formatRetrieveResult } from './salesforce/retrieveResultFormatter';
 import { OrgService, SalesforceOrg } from './salesforce/orgService';
 import { loadSelectedOrg, saveSelectedOrg } from './salesforce/selectedOrgStore';
 
@@ -10,6 +11,7 @@ export function activate(context: vscode.ExtensionContext): void {
     const provider = new MetadataProvider();
     const orgService = new OrgService();
     const packageXmlBuilder = new PackageXmlBuilder();
+    const retrieveOutputChannel = vscode.window.createOutputChannel('Better Org Browser Retrieve');
     const savedSelectedOrg = loadSelectedOrg(context);
     let selectedOrgTarget: string | undefined = savedSelectedOrg?.target;
 
@@ -315,34 +317,51 @@ export function activate(context: vscode.ExtensionContext): void {
                 return;
             }
 
-            await vscode.window.withProgress(
-                {
-                    location: vscode.ProgressLocation.Notification,
-                    title: 'Retrieving Salesforce metadata',
-                    cancellable: false
-                },
-                async () => {
-                    const output = await orgService.retrieveManifest(
-                        targetOrg,
-                        'manifest/package.xml',
-                        root.fsPath
-                    );
+            try {
+                await vscode.window.withProgress(
+                    {
+                        location: vscode.ProgressLocation.Notification,
+                        title: 'Retrieving Salesforce metadata',
+                        cancellable: false
+                    },
+                    async () => {
+                        retrieveOutputChannel.appendLine(`[${new Date().toISOString()}] Retrieving manifest/package.xml from ${targetOrg}`);
 
-                    const document = await vscode.workspace.openTextDocument({
-                        content: output,
-                        language: 'json'
-                    });
+                        const output = await orgService.retrieveManifest(
+                            targetOrg,
+                            'manifest/package.xml',
+                            root.fsPath
+                        );
 
-                    await vscode.window.showTextDocument(document, { preview: false });
-                }
-            );
+                        retrieveOutputChannel.appendLine(output);
+                        retrieveOutputChannel.appendLine('');
 
-            vscode.window.showInformationMessage('Retrieve complete.');
+                        const document = await vscode.workspace.openTextDocument({
+                            content: formatRetrieveResult(output),
+                            language: 'markdown'
+                        });
+
+                        await vscode.window.showTextDocument(document, { preview: false });
+                    }
+                );
+
+                vscode.window.showInformationMessage('Retrieve complete.');
+            } catch (error) {
+                const message = error instanceof Error
+                    ? error.message
+                    : 'Unknown retrieve error';
+
+                retrieveOutputChannel.appendLine(`[${new Date().toISOString()}] Retrieve failed`);
+                retrieveOutputChannel.appendLine(message);
+                retrieveOutputChannel.show(true);
+                vscode.window.showErrorMessage(`Retrieve failed: ${message}`);
+            }
         }
     );
 
     context.subscriptions.push(
         manifestStatusBarItem,
+        retrieveOutputChannel,
         refreshCommand,
         selectOrgCommand,
         showFieldDetailsCommand,
