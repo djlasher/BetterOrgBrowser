@@ -16,6 +16,9 @@
     "onCommand:betterOrgBrowser.showFieldDetails",
     "onCommand:betterOrgBrowser.copyApiName",
     "onCommand:betterOrgBrowser.addToManifest",
+    "onCommand:betterOrgBrowser.removeFromManifest",
+    "onCommand:betterOrgBrowser.clearManifestSelections",
+    "onCommand:betterOrgBrowser.showManifestSelections",
     "onCommand:betterOrgBrowser.previewManifest",
     "onCommand:betterOrgBrowser.writeManifest",
     "onCommand:betterOrgBrowser.retrieveManifest"
@@ -61,6 +64,18 @@
         "title": "Better Org Browser: Add to Manifest"
       },
       {
+        "command": "betterOrgBrowser.removeFromManifest",
+        "title": "Better Org Browser: Remove from Manifest"
+      },
+      {
+        "command": "betterOrgBrowser.clearManifestSelections",
+        "title": "Better Org Browser: Clear Manifest Selections"
+      },
+      {
+        "command": "betterOrgBrowser.showManifestSelections",
+        "title": "Better Org Browser: Show Manifest Selections"
+      },
+      {
         "command": "betterOrgBrowser.previewManifest",
         "title": "Better Org Browser: Preview Manifest"
       },
@@ -81,12 +96,34 @@
           "group": "navigation@1"
         },
         {
-          "command": "betterOrgBrowser.showFieldDetails",
-          "when": "view == betterOrgBrowserView && viewItem =~ /^(string|picklist|currency|address|double|textarea|reference|datetime|boolean|date|int|id|phone|email|url|percent|multipicklist|encryptedstring)$/",
+          "command": "betterOrgBrowser.removeFromManifest",
+          "when": "view == betterOrgBrowserView && viewItem =~ /^(ApexClass|Flow|CustomObject|string|picklist|currency|address|double|textarea|reference|datetime|boolean|date|int|id|phone|email|url|percent|multipicklist|encryptedstring)$/",
           "group": "navigation@2"
         },
         {
+          "command": "betterOrgBrowser.showFieldDetails",
+          "when": "view == betterOrgBrowserView && viewItem =~ /^(string|picklist|currency|address|double|textarea|reference|datetime|boolean|date|int|id|phone|email|url|percent|multipicklist|encryptedstring)$/",
+          "group": "navigation@3"
+        },
+        {
           "command": "betterOrgBrowser.copyApiName",
+          "when": "view == betterOrgBrowserView",
+          "group": "navigation@4"
+        }
+      ],
+      "view/title": [
+        {
+          "command": "betterOrgBrowser.showManifestSelections",
+          "when": "view == betterOrgBrowserView",
+          "group": "navigation@1"
+        },
+        {
+          "command": "betterOrgBrowser.clearManifestSelections",
+          "when": "view == betterOrgBrowserView",
+          "group": "navigation@2"
+        },
+        {
+          "command": "betterOrgBrowser.refresh",
           "when": "view == betterOrgBrowserView",
           "group": "navigation@3"
         }
