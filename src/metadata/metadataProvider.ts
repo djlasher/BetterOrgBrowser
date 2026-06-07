@@ -214,7 +214,7 @@ export class MetadataProvider implements vscode.TreeDataProvider<MetadataNode> {
             await this.createTemporarySfdxProject(tempRoot);
             await this.orgService.retrievePermissionSet(this.selectedOrgTarget, permissionSetApiName, tempRoot.fsPath);
 
-            const permissionSetFile = vscode.Uri.joinPath(tempRoot, 'force-app', 'main', 'default', 'permissionsets', `${permissionSetApiName}.permissionset-meta.xml`);
+            const permissionSetFile = await this.findPermissionSetFile(tempRoot, permissionSetApiName);
             const bytes = await vscode.workspace.fs.readFile(permissionSetFile);
 
             return Buffer.from(bytes).toString('utf8');
@@ -240,6 +240,39 @@ export class MetadataProvider implements vscode.TreeDataProvider<MetadataNode> {
 
         await vscode.workspace.fs.createDirectory(packageFolder);
         await vscode.workspace.fs.writeFile(projectFile, Buffer.from(`${JSON.stringify(projectJson, null, 2)}\n`, 'utf8'));
+    }
+
+    private async findPermissionSetFile(root: vscode.Uri, permissionSetApiName: string): Promise<vscode.Uri> {
+        const expectedFilename = `${permissionSetApiName}.permissionset-meta.xml`;
+        const found = await this.findFileByName(root, expectedFilename);
+
+        if (!found) {
+            throw new Error(`Could not find retrieved permission set file ${expectedFilename}.`);
+        }
+
+        return found;
+    }
+
+    private async findFileByName(root: vscode.Uri, filename: string): Promise<vscode.Uri | undefined> {
+        const entries = await vscode.workspace.fs.readDirectory(root);
+
+        for (const [name, type] of entries) {
+            const child = vscode.Uri.joinPath(root, name);
+
+            if (type === vscode.FileType.File && name === filename) {
+                return child;
+            }
+
+            if (type === vscode.FileType.Directory) {
+                const found = await this.findFileByName(child, filename);
+
+                if (found) {
+                    return found;
+                }
+            }
+        }
+
+        return undefined;
     }
 
     private getObjectPermissionDetails(permission?: ObjectPermission): MetadataNode[] {
