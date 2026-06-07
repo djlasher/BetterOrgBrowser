@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import { MetadataNode } from './metadataNode';
 import { MetadataListItem, OrgService, SObjectField } from '../salesforce/orgService';
-import { parseObjectPermissions } from '../salesforce/permissionSetParser';
+import { ObjectPermission, parseObjectPermissions } from '../salesforce/permissionSetParser';
 
 export class MetadataProvider implements vscode.TreeDataProvider<MetadataNode> {
     private readonly _onDidChangeTreeData: vscode.EventEmitter<MetadataNode | undefined | void> =
@@ -34,13 +34,7 @@ export class MetadataProvider implements vscode.TreeDataProvider<MetadataNode> {
             const rootNodes: MetadataNode[] = [];
 
             if (this.selectedOrgName) {
-                rootNodes.push(
-                    new MetadataNode(
-                        `Connected Org: ${this.selectedOrgName}`,
-                        vscode.TreeItemCollapsibleState.None,
-                        'SalesforceOrg'
-                    )
-                );
+                rootNodes.push(new MetadataNode(`Connected Org: ${this.selectedOrgName}`, vscode.TreeItemCollapsibleState.None, 'SalesforceOrg'));
             }
 
             rootNodes.push(
@@ -70,6 +64,8 @@ export class MetadataProvider implements vscode.TreeDataProvider<MetadataNode> {
                 return this.getPermissionSetFolders(element.apiName);
             case 'PermissionSetObjectPermissionsFolder':
                 return this.getPermissionSetObjectPermissions(element.parentApiName);
+            case 'PermissionSetObjectPermission':
+                return this.getObjectPermissionDetails(element.objectPermission);
             default:
                 return [];
         }
@@ -184,21 +180,31 @@ export class MetadataProvider implements vscode.TreeDataProvider<MetadataNode> {
                 return [new MetadataNode('No object permissions found', vscode.TreeItemCollapsibleState.None, 'Info')];
             }
 
-            return permissions.map((permission) => {
-                const grants = [
-                    permission.allowRead ? 'Read' : undefined,
-                    permission.allowCreate ? 'Create' : undefined,
-                    permission.allowEdit ? 'Edit' : undefined,
-                    permission.allowDelete ? 'Delete' : undefined,
-                    permission.viewAllRecords ? 'View All' : undefined,
-                    permission.modifyAllRecords ? 'Modify All' : undefined
-                ].filter(Boolean).join(', ') || 'No access';
-
-                return new MetadataNode(`${permission.object}: ${grants}`, vscode.TreeItemCollapsibleState.None, 'PermissionSetObjectPermission');
-            });
+            return permissions.map((permission) =>
+                new MetadataNode(permission.object, vscode.TreeItemCollapsibleState.Collapsed, 'PermissionSetObjectPermission', permission.object, permissionSetApiName, undefined, undefined, permission)
+            );
         } catch (error) {
             return this.getErrorMessage(error, 'Permission Set object permission');
         }
+    }
+
+    private getObjectPermissionDetails(permission?: ObjectPermission): MetadataNode[] {
+        if (!permission) {
+            return [new MetadataNode('No permission details available', vscode.TreeItemCollapsibleState.None, 'Info')];
+        }
+
+        return [
+            this.getPermissionFlagNode('Read', permission.allowRead),
+            this.getPermissionFlagNode('Create', permission.allowCreate),
+            this.getPermissionFlagNode('Edit', permission.allowEdit),
+            this.getPermissionFlagNode('Delete', permission.allowDelete),
+            this.getPermissionFlagNode('View All Records', permission.viewAllRecords),
+            this.getPermissionFlagNode('Modify All Records', permission.modifyAllRecords)
+        ];
+    }
+
+    private getPermissionFlagNode(label: string, value: boolean): MetadataNode {
+        return new MetadataNode(`${label}: ${value ? 'Yes' : 'No'}`, vscode.TreeItemCollapsibleState.None, value ? 'PermissionGranted' : 'PermissionDenied');
     }
 
     private getSelectOrgMessage(): MetadataNode[] {
