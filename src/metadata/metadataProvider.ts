@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import { MetadataNode } from './metadataNode';
 import { MetadataListItem, OrgService, SObjectField } from '../salesforce/orgService';
-import { ObjectPermission, parseObjectPermissions } from '../salesforce/permissionSetParser';
+import { FieldPermission, ObjectPermission, parseFieldPermissions, parseObjectPermissions } from '../salesforce/permissionSetParser';
 
 export class MetadataProvider implements vscode.TreeDataProvider<MetadataNode> {
     private readonly _onDidChangeTreeData: vscode.EventEmitter<MetadataNode | undefined | void> =
@@ -64,8 +64,12 @@ export class MetadataProvider implements vscode.TreeDataProvider<MetadataNode> {
                 return this.getPermissionSetFolders(element.apiName);
             case 'PermissionSetObjectPermissionsFolder':
                 return this.getPermissionSetObjectPermissions(element.parentApiName);
+            case 'PermissionSetFieldPermissionsFolder':
+                return this.getPermissionSetFieldPermissions(element.parentApiName);
             case 'PermissionSetObjectPermission':
                 return this.getObjectPermissionDetails(element.objectPermission);
+            case 'PermissionSetFieldPermission':
+                return this.getFieldPermissionDetails(element.fieldPermission);
             default:
                 return [];
         }
@@ -149,7 +153,7 @@ export class MetadataProvider implements vscode.TreeDataProvider<MetadataNode> {
     private getPermissionSetFolders(permissionSetApiName?: string): MetadataNode[] {
         return [
             new MetadataNode('Object Permissions', vscode.TreeItemCollapsibleState.Collapsed, 'PermissionSetObjectPermissionsFolder', undefined, permissionSetApiName),
-            new MetadataNode('Field Permissions', vscode.TreeItemCollapsibleState.Collapsed, 'PermissionSetFolder', undefined, permissionSetApiName),
+            new MetadataNode('Field Permissions', vscode.TreeItemCollapsibleState.Collapsed, 'PermissionSetFieldPermissionsFolder', undefined, permissionSetApiName),
             new MetadataNode('Apex Class Access', vscode.TreeItemCollapsibleState.Collapsed, 'PermissionSetFolder', undefined, permissionSetApiName),
             new MetadataNode('Flow Access', vscode.TreeItemCollapsibleState.Collapsed, 'PermissionSetFolder', undefined, permissionSetApiName),
             new MetadataNode('Custom Permissions', vscode.TreeItemCollapsibleState.Collapsed, 'PermissionSetFolder', undefined, permissionSetApiName),
@@ -159,6 +163,42 @@ export class MetadataProvider implements vscode.TreeDataProvider<MetadataNode> {
     }
 
     private async getPermissionSetObjectPermissions(permissionSetApiName?: string): Promise<MetadataNode[]> {
+        const xml = await this.getPermissionSetXml(permissionSetApiName, 'object permission');
+
+        if (Array.isArray(xml)) {
+            return xml;
+        }
+
+        const permissions = parseObjectPermissions(xml);
+
+        if (!permissions.length) {
+            return [new MetadataNode('No object permissions found', vscode.TreeItemCollapsibleState.None, 'Info')];
+        }
+
+        return permissions.map((permission) =>
+            new MetadataNode(permission.object, vscode.TreeItemCollapsibleState.Collapsed, 'PermissionSetObjectPermission', permission.object, permissionSetApiName, undefined, undefined, permission)
+        );
+    }
+
+    private async getPermissionSetFieldPermissions(permissionSetApiName?: string): Promise<MetadataNode[]> {
+        const xml = await this.getPermissionSetXml(permissionSetApiName, 'field permission');
+
+        if (Array.isArray(xml)) {
+            return xml;
+        }
+
+        const permissions = parseFieldPermissions(xml);
+
+        if (!permissions.length) {
+            return [new MetadataNode('No field permissions found', vscode.TreeItemCollapsibleState.None, 'Info')];
+        }
+
+        return permissions.map((permission) =>
+            new MetadataNode(permission.field, vscode.TreeItemCollapsibleState.Collapsed, 'PermissionSetFieldPermission', permission.field, permissionSetApiName, undefined, undefined, undefined, permission)
+        );
+    }
+
+    private async getPermissionSetXml(permissionSetApiName: string | undefined, label: string): Promise<string | MetadataNode[]> {
         if (!this.selectedOrgTarget || !permissionSetApiName) {
             return this.getSelectOrgMessage();
         }
@@ -173,18 +213,10 @@ export class MetadataProvider implements vscode.TreeDataProvider<MetadataNode> {
             await this.orgService.retrievePermissionSet(this.selectedOrgTarget, permissionSetApiName, root.fsPath);
             const permissionSetFile = vscode.Uri.joinPath(root, 'force-app', 'main', 'default', 'permissionsets', `${permissionSetApiName}.permissionset-meta.xml`);
             const bytes = await vscode.workspace.fs.readFile(permissionSetFile);
-            const xml = Buffer.from(bytes).toString('utf8');
-            const permissions = parseObjectPermissions(xml);
 
-            if (!permissions.length) {
-                return [new MetadataNode('No object permissions found', vscode.TreeItemCollapsibleState.None, 'Info')];
-            }
-
-            return permissions.map((permission) =>
-                new MetadataNode(permission.object, vscode.TreeItemCollapsibleState.Collapsed, 'PermissionSetObjectPermission', permission.object, permissionSetApiName, undefined, undefined, permission)
-            );
+            return Buffer.from(bytes).toString('utf8');
         } catch (error) {
-            return this.getErrorMessage(error, 'Permission Set object permission');
+            return this.getErrorMessage(error, `Permission Set ${label}`);
         }
     }
 
@@ -200,6 +232,17 @@ export class MetadataProvider implements vscode.TreeDataProvider<MetadataNode> {
             this.getPermissionFlagNode('Delete', permission.allowDelete),
             this.getPermissionFlagNode('View All Records', permission.viewAllRecords),
             this.getPermissionFlagNode('Modify All Records', permission.modifyAllRecords)
+        ];
+    }
+
+    private getFieldPermissionDetails(permission?: FieldPermission): MetadataNode[] {
+        if (!permission) {
+            return [new MetadataNode('No permission details available', vscode.TreeItemCollapsibleState.None, 'Info')];
+        }
+
+        return [
+            this.getPermissionFlagNode('Readable', permission.readable),
+            this.getPermissionFlagNode('Editable', permission.editable)
         ];
     }
 
