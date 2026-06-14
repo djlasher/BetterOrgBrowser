@@ -22,7 +22,8 @@
     "onCommand:betterOrgBrowser.previewManifest",
     "onCommand:betterOrgBrowser.writeManifest",
     "onCommand:betterOrgBrowser.retrieveManifest",
-    "onCommand:betterOrgBrowser.syncFieldPermissionEntry"
+    "onCommand:betterOrgBrowser.syncFieldPermissionEntry",
+    "onCommand:betterOrgBrowser.syncObjectPermissionEntry"
   ],
   "main": "./out/extension.js",
   "contributes": {
@@ -92,6 +93,11 @@
         "command": "betterOrgBrowser.syncFieldPermissionEntry",
         "title": "Better Org Browser: Sync Field Permission Entry",
         "icon": "$(cloud-download)"
+      },
+      {
+        "command": "betterOrgBrowser.syncObjectPermissionEntry",
+        "title": "Better Org Browser: Sync Object Permission Entry",
+        "icon": "$(cloud-download)"
       }
     ],
     "menus": {
@@ -99,6 +105,11 @@
         {
           "command": "betterOrgBrowser.syncFieldPermissionEntry",
           "when": "view == betterOrgBrowserView && viewItem == PermissionSetFieldPermission",
+          "group": "inline@1"
+        },
+        {
+          "command": "betterOrgBrowser.syncObjectPermissionEntry",
+          "when": "view == betterOrgBrowserView && viewItem == PermissionSetObjectPermission",
           "group": "inline@1"
         },
         {
