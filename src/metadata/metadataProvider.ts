@@ -8,6 +8,7 @@ export class MetadataProvider implements vscode.TreeDataProvider<MetadataNode> {
         new vscode.EventEmitter<MetadataNode | undefined | void>();
 
     private readonly orgService = new OrgService();
+    private readonly permissionSetXmlCache = new Map<string, string>();
 
     private selectedOrgName: string | undefined;
     private selectedOrgTarget: string | undefined;
@@ -16,12 +17,14 @@ export class MetadataProvider implements vscode.TreeDataProvider<MetadataNode> {
         this._onDidChangeTreeData.event;
 
     refresh(): void {
+        this.permissionSetXmlCache.clear();
         this._onDidChangeTreeData.fire();
     }
 
     setSelectedOrg(orgName: string | undefined, orgTarget: string | undefined): void {
         this.selectedOrgName = orgName;
         this.selectedOrgTarget = orgTarget;
+        this.permissionSetXmlCache.clear();
         this.refresh();
     }
 
@@ -208,6 +211,13 @@ export class MetadataProvider implements vscode.TreeDataProvider<MetadataNode> {
             return [new MetadataNode('Open an SFDX project to inspect permission set details', vscode.TreeItemCollapsibleState.None, 'Info')];
         }
 
+        const cacheKey = `${this.selectedOrgTarget}:${permissionSetApiName}`;
+        const cachedXml = this.permissionSetXmlCache.get(cacheKey);
+
+        if (cachedXml) {
+            return cachedXml;
+        }
+
         try {
             const root = folders[0].uri;
             const tempRoot = vscode.Uri.joinPath(root, '.better-org-browser', 'remote-permissions', `${permissionSetApiName}-${Date.now()}`);
@@ -216,8 +226,10 @@ export class MetadataProvider implements vscode.TreeDataProvider<MetadataNode> {
 
             const permissionSetFile = await this.findAnyPermissionSetFile(tempRoot);
             const bytes = await vscode.workspace.fs.readFile(permissionSetFile);
+            const xml = Buffer.from(bytes).toString('utf8');
+            this.permissionSetXmlCache.set(cacheKey, xml);
 
-            return Buffer.from(bytes).toString('utf8');
+            return xml;
         } catch (error) {
             return this.getErrorMessage(error, `Permission Set ${label}`);
         }
