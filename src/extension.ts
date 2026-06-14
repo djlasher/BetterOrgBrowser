@@ -3,7 +3,7 @@ import { MetadataProvider } from './metadata/metadataProvider';
 import { MetadataNode } from './metadata/metadataNode';
 import { PackageXmlBuilder } from './packageXml/packageXmlBuilder';
 import { loadManifestSelections, saveManifestSelections } from './packageXml/manifestSelectionStore';
-import { findFieldPermissionBlock, mergeFieldPermissionBlock } from './salesforce/permissionSetParser';
+import { findFieldPermissionBlock, findObjectPermissionBlock, mergeFieldPermissionBlock, mergeObjectPermissionBlock } from './salesforce/permissionSetParser';
 import { formatRetrieveResult } from './salesforce/retrieveResultFormatter';
 import { OrgService, SalesforceOrg } from './salesforce/orgService';
 import { loadSelectedOrg, saveSelectedOrg } from './salesforce/selectedOrgStore';
@@ -79,6 +79,68 @@ export function activate(context: vscode.ExtensionContext): void {
         }
 
         return found;
+    };
+
+    const syncPermissionSetEntry = async (
+        node: MetadataNode,
+        entryKind: 'field' | 'object',
+        getEntryName: (node: MetadataNode) => string | undefined,
+        findRemoteBlock: (xml: string, entryName: string) => string | undefined,
+        mergeRemoteBlock: (localXml: string, remoteBlock: string, entryName: string) => string
+    ): Promise<void> => {
+        const folders = vscode.workspace.workspaceFolders;
+        const targetOrg = selectedOrgTarget;
+        const permissionSetApiName = node?.parentApiName;
+        const entryName = getEntryName(node);
+
+        if (!folders?.length) {
+            vscode.window.showWarningMessage('Open an SFDX project before syncing a permission entry.');
+            return;
+        }
+
+        if (!targetOrg) {
+            vscode.window.showWarningMessage('Select a Salesforce org before syncing a permission entry.');
+            return;
+        }
+
+        if (!permissionSetApiName || !entryName) {
+            vscode.window.showWarningMessage(`No ${entryKind} permission entry selected.`);
+            return;
+        }
+
+        const root = folders[0].uri;
+        const permissionSetFile = getPermissionSetFile(root, permissionSetApiName);
+        const tempRoot = vscode.Uri.joinPath(root, '.better-org-browser', 'permission-sync', `${permissionSetApiName}-${entryKind}-${Date.now()}`);
+
+        try {
+            await vscode.window.withProgress(
+                { location: vscode.ProgressLocation.Notification, title: `Syncing ${entryName}`, cancellable: false },
+                async () => {
+                    const localBytes = await vscode.workspace.fs.readFile(permissionSetFile);
+                    const localXml = Buffer.from(localBytes).toString('utf8');
+
+                    await vscode.workspace.fs.createDirectory(tempRoot);
+                    await orgService.retrievePermissionSetMetadataFormat(targetOrg, permissionSetApiName, root.fsPath, tempRoot.fsPath);
+
+                    const remotePermissionSetFile = await findAnyPermissionSetFile(tempRoot);
+                    const remoteBytes = await vscode.workspace.fs.readFile(remotePermissionSetFile);
+                    const remoteXml = Buffer.from(remoteBytes).toString('utf8');
+                    const remoteBlock = findRemoteBlock(remoteXml, entryName);
+
+                    if (!remoteBlock) {
+                        throw new Error(`Could not find remote ${entryKind} permission entry for ${entryName}.`);
+                    }
+
+                    const mergedXml = mergeRemoteBlock(localXml, remoteBlock, entryName);
+                    await vscode.workspace.fs.writeFile(permissionSetFile, Buffer.from(mergedXml, 'utf8'));
+                }
+            );
+
+            vscode.window.showInformationMessage(`Synced ${entryKind} permission entry ${entryName} into ${permissionSetApiName}.`);
+        } catch (error) {
+            const message = error instanceof Error ? error.message : 'Unknown permission sync error';
+            vscode.window.showErrorMessage(`Permission sync failed: ${message}`);
+        }
     };
 
     const refreshCommand = vscode.commands.registerCommand('betterOrgBrowser.refresh', () => {
@@ -238,59 +300,23 @@ export function activate(context: vscode.ExtensionContext): void {
     });
 
     const syncFieldPermissionEntryCommand = vscode.commands.registerCommand('betterOrgBrowser.syncFieldPermissionEntry', async (node: MetadataNode) => {
-        const folders = vscode.workspace.workspaceFolders;
-        const targetOrg = selectedOrgTarget;
-        const permissionSetApiName = node?.parentApiName;
-        const fieldName = node?.fieldPermission?.field ?? node?.apiName;
+        await syncPermissionSetEntry(
+            node,
+            'field',
+            (selectedNode) => selectedNode?.fieldPermission?.field ?? selectedNode?.apiName,
+            findFieldPermissionBlock,
+            mergeFieldPermissionBlock
+        );
+    });
 
-        if (!folders?.length) {
-            vscode.window.showWarningMessage('Open an SFDX project before syncing a permission entry.');
-            return;
-        }
-
-        if (!targetOrg) {
-            vscode.window.showWarningMessage('Select a Salesforce org before syncing a permission entry.');
-            return;
-        }
-
-        if (!permissionSetApiName || !fieldName) {
-            vscode.window.showWarningMessage('No field permission entry selected.');
-            return;
-        }
-
-        const root = folders[0].uri;
-        const permissionSetFile = getPermissionSetFile(root, permissionSetApiName);
-        const tempRoot = vscode.Uri.joinPath(root, '.better-org-browser', 'permission-sync', `${permissionSetApiName}-${Date.now()}`);
-
-        try {
-            await vscode.window.withProgress(
-                { location: vscode.ProgressLocation.Notification, title: `Syncing ${fieldName}`, cancellable: false },
-                async () => {
-                    const localBytes = await vscode.workspace.fs.readFile(permissionSetFile);
-                    const localXml = Buffer.from(localBytes).toString('utf8');
-
-                    await vscode.workspace.fs.createDirectory(tempRoot);
-                    await orgService.retrievePermissionSetMetadataFormat(targetOrg, permissionSetApiName, root.fsPath, tempRoot.fsPath);
-
-                    const remotePermissionSetFile = await findAnyPermissionSetFile(tempRoot);
-                    const remoteBytes = await vscode.workspace.fs.readFile(remotePermissionSetFile);
-                    const remoteXml = Buffer.from(remoteBytes).toString('utf8');
-                    const remoteBlock = findFieldPermissionBlock(remoteXml, fieldName);
-
-                    if (!remoteBlock) {
-                        throw new Error(`Could not find remote field permission entry for ${fieldName}.`);
-                    }
-
-                    const mergedXml = mergeFieldPermissionBlock(localXml, remoteBlock, fieldName);
-                    await vscode.workspace.fs.writeFile(permissionSetFile, Buffer.from(mergedXml, 'utf8'));
-                }
-            );
-
-            vscode.window.showInformationMessage(`Synced field permission entry ${fieldName} into ${permissionSetApiName}.`);
-        } catch (error) {
-            const message = error instanceof Error ? error.message : 'Unknown permission sync error';
-            vscode.window.showErrorMessage(`Permission sync failed: ${message}`);
-        }
+    const syncObjectPermissionEntryCommand = vscode.commands.registerCommand('betterOrgBrowser.syncObjectPermissionEntry', async (node: MetadataNode) => {
+        await syncPermissionSetEntry(
+            node,
+            'object',
+            (selectedNode) => selectedNode?.objectPermission?.object ?? selectedNode?.apiName,
+            findObjectPermissionBlock,
+            mergeObjectPermissionBlock
+        );
     });
 
     const retrieveManifestCommand = vscode.commands.registerCommand('betterOrgBrowser.retrieveManifest', async () => {
@@ -357,6 +383,7 @@ export function activate(context: vscode.ExtensionContext): void {
         previewManifestCommand,
         writeManifestCommand,
         syncFieldPermissionEntryCommand,
+        syncObjectPermissionEntryCommand,
         retrieveManifestCommand
     );
 
