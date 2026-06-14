@@ -1,3 +1,5 @@
+import { findXmlBlockByChildValue, mergeXmlBlockByChildValue } from './permissionSetMerge';
+
 export interface ObjectPermission {
     object: string;
     allowCreate: boolean;
@@ -32,22 +34,20 @@ export function parseFieldPermissions(xml: string): FieldPermission[] {
         .sort((a, b) => a.field.localeCompare(b.field));
 }
 
-export function findFieldPermissionBlock(xml: string, fieldName: string): string | undefined {
-    const blocks = xml.match(/<fieldPermissions>[\s\S]*?<\/fieldPermissions>/g) ?? [];
+export function findObjectPermissionBlock(xml: string, objectName: string): string | undefined {
+    return findXmlBlockByChildValue(xml, 'objectPermissions', 'object', objectName);
+}
 
-    return blocks.find((block) => readTagValue(block, 'field') === fieldName);
+export function findFieldPermissionBlock(xml: string, fieldName: string): string | undefined {
+    return findXmlBlockByChildValue(xml, 'fieldPermissions', 'field', fieldName);
+}
+
+export function mergeObjectPermissionBlock(localXml: string, remoteBlock: string, objectName: string): string {
+    return mergeXmlBlockByChildValue(localXml, remoteBlock, 'objectPermissions', 'object', objectName);
 }
 
 export function mergeFieldPermissionBlock(localXml: string, remoteBlock: string, fieldName: string): string {
-    const blocks = localXml.match(/<fieldPermissions>[\s\S]*?<\/fieldPermissions>/g) ?? [];
-    const existingBlock = blocks.find((block) => readTagValue(block, 'field') === fieldName);
-    const normalizedRemoteBlock = normalizeBlockIndent(remoteBlock, detectPermissionEntryIndent(localXml));
-
-    if (existingBlock) {
-        return localXml.replace(existingBlock, normalizedRemoteBlock);
-    }
-
-    return localXml.replace(/\s*<\/PermissionSet>\s*$/, `\n${normalizedRemoteBlock}\n</PermissionSet>\n`);
+    return mergeXmlBlockByChildValue(localXml, remoteBlock, 'fieldPermissions', 'field', fieldName);
 }
 
 function parseObjectPermissionBlock(block: string): ObjectPermission | undefined {
@@ -87,27 +87,8 @@ function readBooleanTagValue(block: string, tagName: string): boolean {
 }
 
 function readTagValue(block: string, tagName: string): string | undefined {
-    const pattern = new RegExp(`<${tagName}>([\\s\\S]*?)<\\/${tagName}>`);
+    const pattern = new RegExp(`<${tagName}>([\\s\\S]*?)<\/${tagName}>`);
     const match = block.match(pattern);
 
     return match?.[1]?.trim();
-}
-
-function detectPermissionEntryIndent(xml: string): string {
-    const match = xml.match(/\n([ \t]*)<fieldPermissions>/) ?? xml.match(/\n([ \t]*)<objectPermissions>/);
-
-    return match?.[1] ?? '    ';
-}
-
-function normalizeBlockIndent(block: string, targetIndent: string): string {
-    const lines = block.trim().split(/\r?\n/);
-    const sourceIndent = getLeadingWhitespace(lines[0] ?? '');
-
-    return lines
-        .map((line) => `${targetIndent}${line.startsWith(sourceIndent) ? line.slice(sourceIndent.length) : line.trimStart()}`)
-        .join('\n');
-}
-
-function getLeadingWhitespace(value: string): string {
-    return value.match(/^[ \t]*/)?.[0] ?? '';
 }
