@@ -62,7 +62,7 @@ Implemented:
 - Permission Set Object Permission details.
 - Permission Set Field Permission details.
 
-## Phase 4 — Manifest generation ✅ Done
+## Phase 4 — Manifest generation ✅ Done, UX polish needed
 
 Implemented:
 
@@ -75,6 +75,13 @@ Implemented:
 - Show Manifest Selections.
 - Persist manifest selections.
 - Status bar manifest count.
+
+Remaining UX polish:
+
+- Make Show Manifest Selections a better readonly/live preview.
+- Ensure Clear Manifest Selections updates any open selections display.
+- Avoid save prompts when closing generated preview documents.
+- Consider a dedicated Manifest Selections tree section.
 
 ## Phase 5 — Retrieval ✅ First pass done
 
@@ -171,19 +178,23 @@ Implemented:
 - Expandable Field Permission detail rows.
 - Metadata-format temporary retrieve for remote Permission Set XML.
 - Inline Sync Field Permission Entry command.
+- Inline Sync Object Permission Entry command.
 - Single-entry merge into local source-format Permission Set XML.
+- Stable Field Permission insertion sorted by field name.
+- Stable Object Permission insertion sorted by object name.
+- Canonical 4-space XML formatting for synced Permission Set blocks.
+- Editor-aware file updates for already-open Permission Set XML files.
+- Remote Permission Set XML session cache.
 
 Next improvements:
 
-- Insert synced Field Permission blocks in sorted/stable order instead of appending near the bottom.
-- Add Sync Object Permission Entry.
-- Cache remote Permission Set XML during a session to avoid repeated CLI retrieves.
+- Add visible cache hit/miss logging.
 - Fill Apex Class Access.
 - Fill Flow Access.
 - Fill Custom Permissions.
 - Fill Tab Settings.
 - Fill User Permissions.
-- Add better icons/labels for permission sync actions.
+- Add better icons/labels and context guards for permission sync actions.
 
 ## Phase 9 — Dependency awareness
 
@@ -201,14 +212,19 @@ Future feature ideas:
 
 Needed before heavy enterprise usage.
 
-Features:
+Implemented:
+
+- Remote Permission Set XML session cache for Permission Set browsing.
+- Cache clear on selected-org change.
+- Cache clear on Better Org Browser refresh.
+
+Still planned:
 
 - Cache metadata list responses.
 - Cache object describe responses.
-- Cache remote Permission Set XML responses.
-- Add refresh controls.
+- Add visible cache hit/miss logging.
 - Add loading indicators.
-- Avoid repeated CLI calls.
+- Avoid repeated CLI calls across more metadata types.
 - Add max result warnings.
 
 ## Phase 11 — Better UI
@@ -216,6 +232,8 @@ Features:
 Possible improvements:
 
 - Dedicated manifest selections tree section.
+- Better Manifest Selections preview behavior.
+- Avoid save prompts for generated preview documents.
 - Output channel for CLI logs.
 - Tree icons by metadata type.
 - Search/filter metadata.
@@ -224,7 +242,14 @@ Possible improvements:
 - Selected-state indicators for manifest entries.
 - Inline one-click sync/retrieve affordances similar to the standard Org Browser UX.
 
-## Phase 12 — Packaging
+## Phase 12 — Refactor and packaging
+
+Needed before packaging:
+
+- Modularize `extension.ts` into smaller command/service files.
+- Clean up `package.json` command and menu contributions.
+- Move Permission Set sync logic out of `extension.ts`.
+- Move manifest command logic out of `extension.ts`.
 
 Eventually:
 
@@ -255,9 +280,10 @@ npm run compile
 5. Verify manifest selections persisted.
 6. Verify Permission Set browsing still works.
 7. Verify Field Permission sync still works.
-8. Improve sorted insertion for synced Field Permission entries.
-9. Add Object Permission sync.
-10. Begin modularizing `extension.ts`.
+8. Verify Object Permission sync still works.
+9. Verify Refresh clears remote Permission Set XML cache.
+10. Fix Manifest Selections preview and Clear Selections feedback.
+11. Begin modularizing `extension.ts`.
 
 ## Guardrails
 
@@ -266,3 +292,4 @@ npm run compile
 - Do not commit retrieved metadata into the extension repo.
 - Do not commit local scratch describe JSON or `.better-org-browser` temp output.
 - Keep generated folders like `node_modules` and `out` ignored.
+- Do not add deploy behavior; current Permission Set work should remain retrieve/browse/sync into local files only.
