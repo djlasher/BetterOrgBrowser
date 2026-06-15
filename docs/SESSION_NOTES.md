@@ -82,21 +82,25 @@ Permission Sets
 
 Object Permissions and Field Permissions are parsed from remote Permission Set XML retrieved into a temporary metadata-format folder under the SFDX test project. Browsing Permission Set internals should not mutate the local working copy.
 
+Remote Permission Set XML is cached for the current Extension Development Host session by selected org and Permission Set API name. The cache is cleared when the org changes or the Better Org Browser tree is refreshed.
+
 ### Permission Entry Sync
 
-The major differentiator now has a first working slice:
+The major differentiator now supports Field Permission and Object Permission sync:
 
 ```text
 Remote full Permission Set
-→ browse Field Permissions
-→ click inline cloud-download on one field permission
-→ insert/replace only that <fieldPermissions> block in the local truncated Permission Set XML
+→ browse Field Permissions or Object Permissions
+→ click inline cloud-download on one permission entry
+→ insert/replace only that selected XML block in the local truncated Permission Set XML
 ```
 
 Confirmed working:
 
 - Field Permissions browse remote entries.
+- Object Permissions browse remote entries.
 - Inline cloud-download command appears on `PermissionSetFieldPermission` rows.
+- Inline cloud-download command appears on `PermissionSetObjectPermission` rows.
 - Sync Field Permission Entry retrieves remote metadata format XML using:
 
 ```bash
@@ -104,12 +108,14 @@ sf project retrieve start --metadata PermissionSet:<name> --target-org <org> --s
 ```
 
 - The selected remote `<fieldPermissions>` block is merged into the local source-format Permission Set file.
+- The selected remote `<objectPermissions>` block is merged into the local source-format Permission Set file.
+- Synced Permission Set blocks use canonical 4-space XML formatting.
+- Sync updates already-open editor documents safely instead of only writing to disk behind the editor.
+- Field Permission blocks are sorted by field name.
+- Object Permission blocks are sorted by object name.
+- Field Permission blocks are placed before Object Permission and Tab Setting sections.
+- Object Permission blocks are placed before Tab Setting sections.
 - This avoids retrieving the whole Permission Set into the working copy and preserves a small Git diff.
-
-Known behavior to improve later:
-
-- Synced `<fieldPermissions>` entries are currently inserted at the bottom before `</PermissionSet>`.
-- Later we should insert entries in a sorted/stable location among existing `<fieldPermissions>` blocks.
 
 ## Important Files
 
@@ -120,9 +126,11 @@ src/metadata/metadataProvider.ts
 src/packageXml/packageXmlBuilder.ts
 src/packageXml/manifestSelectionStore.ts
 src/salesforce/orgService.ts
+src/salesforce/permissionSetMerge.ts
 src/salesforce/permissionSetParser.ts
 src/salesforce/retrieveResultFormatter.ts
 src/salesforce/selectedOrgStore.ts
+src/workspace/textFile.ts
 package.json
 ```
 
@@ -167,6 +175,7 @@ Important notes:
 - Metadata-format Permission Set retrieve must not use `--json` in this environment because that combo caused a Salesforce CLI crash.
 - Windows paths with spaces required switching command execution to a quoted `exec(...)` command path on Windows.
 - The extension repo itself should remain a VS Code extension repo and should not become an SFDX project.
+- Permission Set browsing retrieves remote XML only; no deploy behavior has been added.
 
 ## Development Workflow
 
@@ -193,30 +202,24 @@ Press F5 in VS Code
 6. Add items to manifest.
 7. Write manifest.
 8. Retrieve manifest.
-9. For Permission Set sync testing, remove a field permission block locally, browse the remote permission set, and click the inline sync button for that field permission.
+9. For Permission Set sync testing, remove a field or object permission block locally, browse the remote permission set, and click the inline sync button for that permission entry.
 
 ## Known Limitations
 
 - `extension.ts` is becoming large and should be modularized.
-- Permission Set sync currently supports Field Permissions only.
-- Synced Field Permission blocks are appended near the bottom rather than sorted into the existing field permission section.
-- Object Permission sync is not implemented yet.
 - Apex Class Access, Flow Access, Custom Permissions, Tab Settings, and User Permissions folders are placeholder shells.
 - No dependency analysis yet.
-- No caching yet.
-- Large org performance not optimized yet.
+- Large org performance still needs broader caching beyond Permission Set XML.
 - No dedicated Manifest Selections tree section yet.
 - No selected-state indicator on metadata nodes.
 
 ## Immediate Next Priorities
 
-1. Add sorted/stable insertion for synced Field Permission blocks.
-2. Add Object Permission sync using the same pattern.
-3. Modularize `extension.ts` into command modules/services.
-4. Add shared remote Permission Set XML cache to avoid repeated retrieves.
-5. Fill Apex Class Access / Flow Access / Custom Permissions / Tab Settings / User Permissions.
-6. Add richer Custom Object drilldown.
-7. Add caching and large-org performance improvements.
+1. Modularize `extension.ts` into command modules/services.
+2. Fill Apex Class Access / Flow Access / Custom Permissions / Tab Settings / User Permissions.
+3. Add richer Custom Object drilldown.
+4. Add broader caching and large-org performance improvements.
+5. Add dependency awareness.
 
 ## Mental Model For Next Session
 
@@ -231,7 +234,7 @@ VS Code Extension
 → retrieve metadata into SFDX project
 ```
 
-And the key product differentiator has a working first slice:
+And the key product differentiator has working Field Permission and Object Permission sync:
 
 ```text
 Git has a truncated Permission Set
@@ -244,11 +247,10 @@ Git has a truncated Permission Set
 Next sessions should focus on:
 
 ```text
-permission-entry sync polish
-→ object permission sync
-→ modularization
-→ caching
-→ more metadata types
+modularization
+→ more Permission Set folders
+→ richer Custom Object drilldown
+→ broader caching
 → dependency awareness
 → enterprise-scale performance
 ```
