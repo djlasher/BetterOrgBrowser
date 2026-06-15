@@ -7,6 +7,7 @@ import { findFieldPermissionBlock, findObjectPermissionBlock, mergeFieldPermissi
 import { formatRetrieveResult } from './salesforce/retrieveResultFormatter';
 import { OrgService, SalesforceOrg } from './salesforce/orgService';
 import { loadSelectedOrg, saveSelectedOrg } from './salesforce/selectedOrgStore';
+import { readTextFile, writeTextFile } from './workspace/textFile';
 
 export function activate(context: vscode.ExtensionContext): void {
     const provider = new MetadataProvider();
@@ -116,8 +117,7 @@ export function activate(context: vscode.ExtensionContext): void {
             await vscode.window.withProgress(
                 { location: vscode.ProgressLocation.Notification, title: `Syncing ${entryName}`, cancellable: false },
                 async () => {
-                    const localBytes = await vscode.workspace.fs.readFile(permissionSetFile);
-                    const localXml = Buffer.from(localBytes).toString('utf8');
+                    const localXml = await readTextFile(permissionSetFile);
 
                     await vscode.workspace.fs.createDirectory(tempRoot);
                     await orgService.retrievePermissionSetMetadataFormat(targetOrg, permissionSetApiName, root.fsPath, tempRoot.fsPath);
@@ -132,7 +132,7 @@ export function activate(context: vscode.ExtensionContext): void {
                     }
 
                     const mergedXml = mergeRemoteBlock(localXml, remoteBlock, entryName);
-                    await vscode.workspace.fs.writeFile(permissionSetFile, Buffer.from(mergedXml, 'utf8'));
+                    await writeTextFile(permissionSetFile, mergedXml);
                 }
             );
 
