@@ -12,6 +12,7 @@
   ],
   "activationEvents": [
     "onView:betterOrgBrowserView",
+    "onCommand:betterOrgBrowser.refresh",
     "onCommand:betterOrgBrowser.selectOrg",
     "onCommand:betterOrgBrowser.showFieldDetails",
     "onCommand:betterOrgBrowser.copyApiName",
@@ -47,7 +48,8 @@
     "commands": [
       {
         "command": "betterOrgBrowser.refresh",
-        "title": "Refresh Better Org Browser"
+        "title": "Better Org Browser: Refresh",
+        "icon": "$(refresh)"
       },
       {
         "command": "betterOrgBrowser.selectOrg",
@@ -71,11 +73,13 @@
       },
       {
         "command": "betterOrgBrowser.clearManifestSelections",
-        "title": "Better Org Browser: Clear Manifest Selections"
+        "title": "Better Org Browser: Clear Manifest Selections",
+        "icon": "$(clear-all)"
       },
       {
         "command": "betterOrgBrowser.showManifestSelections",
-        "title": "Better Org Browser: Show Manifest Selections"
+        "title": "Better Org Browser: Show Manifest Selections",
+        "icon": "$(list-tree)"
       },
       {
         "command": "betterOrgBrowser.previewManifest",
@@ -101,6 +105,7 @@
       }
     ],
     "menus": {
+      "view item/context": [],
       "view/item/context": [
         {
           "command": "betterOrgBrowser.syncFieldPermissionEntry",
@@ -114,17 +119,17 @@
         },
         {
           "command": "betterOrgBrowser.addToManifest",
-          "when": "view == betterOrgBrowserView && viewItem =~ /^(ApexClass|Flow|CustomObject|PermissionSet|string|picklist|currency|address|double|textarea|reference|datetime|boolean|date|int|id|phone|email|url|percent|multipicklist|encryptedstring)$/",
+          "when": "view == betterOrgBrowserView",
           "group": "navigation@1"
         },
         {
           "command": "betterOrgBrowser.removeFromManifest",
-          "when": "view == betterOrgBrowserView && viewItem =~ /^(ApexClass|Flow|CustomObject|PermissionSet|string|picklist|currency|address|double|textarea|reference|datetime|boolean|date|int|id|phone|email|url|percent|multipicklist|encryptedstring)$/",
+          "when": "view == betterOrgBrowserView",
           "group": "navigation@2"
         },
         {
           "command": "betterOrgBrowser.showFieldDetails",
-          "when": "view == betterOrgBrowserView && viewItem =~ /^(string|picklist|currency|address|double|textarea|reference|datetime|boolean|date|int|id|phone|email|url|percent|multipicklist|encryptedstring)$/",
+          "when": "view == betterOrgBrowserView",
           "group": "navigation@3"
         },
         {
