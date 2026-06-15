@@ -54,7 +54,7 @@ The extension is functional and tested locally through the VS Code Extension Dev
 
 ### Permission Set Deep Browser
 
-Permission Sets now load from the org and are expandable.
+Permission Sets load from the org and are expandable.
 
 Current tree shape:
 
@@ -117,6 +117,23 @@ sf project retrieve start --metadata PermissionSet:<name> --target-org <org> --s
 - Object Permission blocks are placed before Tab Setting sections.
 - This avoids retrieving the whole Permission Set into the working copy and preserves a small Git diff.
 
+### Latest QA Results
+
+Validated in the Extension Development Host:
+
+- Existing Field Permission sync: passed.
+- New Field Permission sync after existing field: passed.
+- Repeating the same new Field Permission sync: passed.
+- Closing and reopening the Permission Set XML tab preserves saved changes: passed.
+- Sync after restarting the F5 Extension Development Host: passed.
+- Object Permission sync after fields exist: passed.
+- Field Permission sync after object permission exists: passed for both new and existing fields.
+- Dirty/open editor formatting correction: passed; syncing a permission can normalize manually bad indentation.
+
+New issue found:
+
+- Show Manifest Selections opens an editable temporary document. If Clear Manifest Selections is clicked while that preview is open, the preview does not update. Closing the preview can show a save prompt. Reopening Show Manifest Selections correctly reports that the manifest selection store is empty.
+
 ## Important Files
 
 ```text
@@ -148,13 +165,9 @@ Manifest selections support:
 - Write `manifest/package.xml`
 - Retrieve manifest
 
-Status bar example:
+Known UX issue:
 
-```text
-Manifest: 3
-```
-
-Clicking the status bar opens Show Manifest Selections.
+- Show Manifest Selections currently opens an editable preview document. Clearing selections does not update an already-open preview, and the preview may ask to save on close.
 
 ## Retrieve Commands
 
@@ -203,6 +216,7 @@ Press F5 in VS Code
 7. Write manifest.
 8. Retrieve manifest.
 9. For Permission Set sync testing, remove a field or object permission block locally, browse the remote permission set, and click the inline sync button for that permission entry.
+10. For caching validation, expand Object Permissions then Field Permissions for the same Permission Set; second expansion should use cached XML. Refresh should clear the cache.
 
 ## Known Limitations
 
@@ -212,14 +226,18 @@ Press F5 in VS Code
 - Large org performance still needs broader caching beyond Permission Set XML.
 - No dedicated Manifest Selections tree section yet.
 - No selected-state indicator on metadata nodes.
+- Manifest preview UX needs cleanup.
+- Package/menu contribution rules need cleanup after toolbar and inline command additions.
 
 ## Immediate Next Priorities
 
-1. Modularize `extension.ts` into command modules/services.
-2. Fill Apex Class Access / Flow Access / Custom Permissions / Tab Settings / User Permissions.
-3. Add richer Custom Object drilldown.
-4. Add broader caching and large-org performance improvements.
-5. Add dependency awareness.
+1. Fix Manifest Selection preview UX and clear-selection feedback.
+2. Modularize `extension.ts` into command modules/services.
+3. Add visible cache hit/miss logging for remote Permission Set XML.
+4. Fill Apex Class Access / Flow Access / Custom Permissions / Tab Settings / User Permissions.
+5. Add richer Custom Object drilldown.
+6. Add broader caching and large-org performance improvements.
+7. Add dependency awareness.
 
 ## Mental Model For Next Session
 
@@ -247,7 +265,9 @@ Git has a truncated Permission Set
 Next sessions should focus on:
 
 ```text
-modularization
+Manifest UX cleanup
+→ modularization
+→ cache logging
 → more Permission Set folders
 → richer Custom Object drilldown
 → broader caching
