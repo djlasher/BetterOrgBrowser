@@ -23,6 +23,36 @@ export function activate(context: vscode.ExtensionContext): void {
     manifestStatusBarItem.command = 'betterOrgBrowser.showManifestSelections';
     manifestStatusBarItem.tooltip = 'Show Better Org Browser manifest selections';
 
+    const manifestSelectionsDocumentUri = vscode.Uri.parse('better-org-browser:/manifest-selections.md');
+    const manifestSelectionsChangedEmitter = new vscode.EventEmitter<vscode.Uri>();
+
+    const getManifestSelectionsContent = (): string => {
+        const selections = packageXmlBuilder.getSelections();
+
+        if (selections.length === 0) {
+            return ['# Package XML Selections', '', 'Total selections: 0', '', 'No package.xml selections yet.', ''].join('\n');
+        }
+
+        return [
+            '# Package XML Selections',
+            '',
+            `Total selections: ${selections.length}`,
+            '',
+            ...selections.map((selection) => `- ${selection.type}: ${selection.member}`),
+            ''
+        ].join('\n');
+    };
+
+    const manifestSelectionsProvider: vscode.TextDocumentContentProvider = {
+        onDidChange: manifestSelectionsChangedEmitter.event,
+        provideTextDocumentContent: () => getManifestSelectionsContent()
+    };
+
+    const manifestSelectionsProviderRegistration = vscode.workspace.registerTextDocumentContentProvider(
+        'better-org-browser',
+        manifestSelectionsProvider
+    );
+
     const updateManifestStatusBarItem = (): void => {
         manifestStatusBarItem.text = `$(list-tree) Manifest: ${packageXmlBuilder.getCount()}`;
         manifestStatusBarItem.show();
@@ -37,6 +67,7 @@ export function activate(context: vscode.ExtensionContext): void {
     const saveSelections = async (): Promise<void> => {
         await saveManifestSelections(context, packageXmlBuilder.getSelections());
         updateManifestStatusBarItem();
+        manifestSelectionsChangedEmitter.fire(manifestSelectionsDocumentUri);
     };
 
     vscode.window.registerTreeDataProvider('betterOrgBrowserView', provider);
@@ -261,15 +292,8 @@ export function activate(context: vscode.ExtensionContext): void {
     });
 
     const showManifestSelectionsCommand = vscode.commands.registerCommand('betterOrgBrowser.showManifestSelections', async () => {
-        const selections = packageXmlBuilder.getSelections();
-
-        if (selections.length === 0) {
-            vscode.window.showInformationMessage('No package.xml selections yet.');
-            return;
-        }
-
-        const lines = ['# Package XML Selections', '', `Total selections: ${selections.length}`, '', ...selections.map((selection) => `- ${selection.type}: ${selection.member}`), ''];
-        const document = await vscode.workspace.openTextDocument({ content: lines.join('\n'), language: 'markdown' });
+        const document = await vscode.workspace.openTextDocument(manifestSelectionsDocumentUri);
+        await vscode.languages.setTextDocumentLanguage(document, 'markdown');
         await vscode.window.showTextDocument(document, { preview: false });
     });
 
@@ -371,6 +395,8 @@ export function activate(context: vscode.ExtensionContext): void {
 
     context.subscriptions.push(
         manifestStatusBarItem,
+        manifestSelectionsChangedEmitter,
+        manifestSelectionsProviderRegistration,
         retrieveOutputChannel,
         refreshCommand,
         selectOrgCommand,
