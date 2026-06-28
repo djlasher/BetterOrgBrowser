@@ -207,6 +207,37 @@ export function activate(context: vscode.ExtensionContext): void {
         vscode.window.showInformationMessage(`Copied ${value}`);
     });
 
+    const copyFullMetadataPathCommand = vscode.commands.registerCommand('betterOrgBrowser.copyFullMetadataPath', async (node: MetadataNode) => {
+        if (!node) {
+            vscode.window.showWarningMessage('No metadata item selected.');
+            return;
+        }
+
+        let value = node.label;
+
+        switch (node.packageXmlType) {
+            case 'CustomObject':
+                value = `CustomObject: ${node.apiName ?? node.label}`;
+                break;
+            case 'CustomField':
+                value = `CustomField: ${node.parentApiName}.${node.apiName}`;
+                break;
+            case 'ApexClass':
+                value = `ApexClass: ${node.apiName ?? node.label}`;
+                break;
+            case 'Flow':
+                value = `Flow: ${node.apiName ?? node.label}`;
+                break;
+            default:
+                if (node.metadataType === 'PermissionSet') {
+                    value = `PermissionSet: ${node.apiName ?? node.label}`;
+                }
+        }
+
+        await vscode.env.clipboard.writeText(value);
+        vscode.window.showInformationMessage(`Copied ${value}`);
+    });
+
     const addToManifestCommand = vscode.commands.registerCommand('betterOrgBrowser.addToManifest', async (node: MetadataNode) => {
         if (!node?.packageXmlType) {
             vscode.window.showWarningMessage('This metadata item cannot be added to package.xml yet.');
@@ -376,6 +407,7 @@ export function activate(context: vscode.ExtensionContext): void {
         selectOrgCommand,
         showFieldDetailsCommand,
         copyApiNameCommand,
+        copyFullMetadataPathCommand,
         addToManifestCommand,
         removeFromManifestCommand,
         clearManifestSelectionsCommand,

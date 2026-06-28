@@ -16,6 +16,7 @@
     "onCommand:betterOrgBrowser.selectOrg",
     "onCommand:betterOrgBrowser.showFieldDetails",
     "onCommand:betterOrgBrowser.copyApiName",
+    "onCommand:betterOrgBrowser.copyFullMetadataPath",
     "onCommand:betterOrgBrowser.addToManifest",
     "onCommand:betterOrgBrowser.removeFromManifest",
     "onCommand:betterOrgBrowser.clearManifestSelections",
@@ -62,6 +63,10 @@
       {
         "command": "betterOrgBrowser.copyApiName",
         "title": "Better Org Browser: Copy API Name"
+      },
+      {
+        "command": "betterOrgBrowser.copyFullMetadataPath",
+        "title": "Better Org Browser: Copy Full Metadata Path"
       },
       {
         "command": "betterOrgBrowser.addToManifest",
@@ -136,6 +141,11 @@
           "command": "betterOrgBrowser.copyApiName",
           "when": "view == betterOrgBrowserView",
           "group": "navigation@4"
+        },
+        {
+          "command": "betterOrgBrowser.copyFullMetadataPath",
+          "when": "view == betterOrgBrowserView",
+          "group": "navigation@5"
         }
       ],
       "view/title": [
