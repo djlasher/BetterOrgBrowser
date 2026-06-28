@@ -4,6 +4,47 @@ Session-based development history for BetterOrgBrowser.
 
 Use versions instead of dates. Keep this to one entry per work session.
 
+## v0.0.5 - Manifest UX And Metadata Path Polish
+
+### Completed
+
+- Replaced Show Manifest Selections editable temporary document with a readonly virtual document provider.
+- Added live refresh for the manifest selections preview when selections are added, removed, or cleared.
+- Fixed manifest selections preview close behavior so it no longer prompts to save generated display-only content.
+- Added visible Permission Set XML cache observability through a dedicated output channel.
+- Logged Permission Set XML cache events for cache misses, cache stores, cache hits, refresh clears, and selected-org changes.
+- Added Permission Set loading progress feedback during slow remote Permission Set metadata retrieval.
+- Added Copy Full Metadata Path command and context menu entry.
+- Added formatted path copy support for Custom Objects, Custom Fields, Apex Classes, Flows, and Permission Sets.
+- Verified the new metadata path command is registered in package contributions and extension subscriptions.
+
+### Validated Test Cases
+
+- Show Manifest Selections opens as display-only content instead of an editable unsaved temp document.
+- Clearing manifest selections updates an already-open manifest selections preview.
+- Closing the manifest selections preview does not trigger a save prompt.
+- Permission Set Object Permissions expansion logs cache MISS and cache STORE.
+- Permission Set Field Permissions expansion for the same Permission Set logs cache HIT.
+- Refresh clears Permission Set XML cache and the next expansion logs a new cache MISS.
+- Permission Set retrieval shows a progress indicator while remote metadata is loading.
+- Copy Full Metadata Path appears in the tree context menu and copies formatted paths for supported top-level metadata nodes.
+
+### Current Gaps
+
+- Copy Full Metadata Path is currently node-based instead of hierarchy-aware for nested Permission Set child nodes.
+- Permission Set loading progress shows visual progress, but VS Code may not consistently render the notification title text.
+- `extension.ts` is too large and should be modularized before many more features are added.
+- `package.json` menu contribution rules need cleanup after repeated command additions.
+- Remaining Permission Set folders are still placeholder shells: Apex Class Access, Flow Access, Custom Permissions, Tab Settings, and User Permissions.
+
+### Next Focus
+
+- Fix hierarchy-aware Copy Full Metadata Path behavior for Permission Set folders and child permission entries.
+- Improve Permission Set loading indicator UX if VS Code continues to hide progress text.
+- Modularize `extension.ts` into command and service files.
+- Implement remaining Permission Set folders.
+- Begin richer Custom Object drilldown.
+
 ## v0.0.4 - Permission Set Sync Stabilization
 
 ### Completed
