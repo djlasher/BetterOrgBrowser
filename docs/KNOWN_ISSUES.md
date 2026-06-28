@@ -2,37 +2,75 @@
 
 Current known issues and follow-up items discovered during Extension Development Host testing.
 
-## Manifest Selection Preview
+## Copy Full Metadata Path For Permission Set Child Nodes
 
 ### Issue
 
-Show Manifest Selections opens an editable temporary Markdown document.
+Copy Full Metadata Path is currently node-based instead of hierarchy-aware for nested Permission Set nodes.
+
+Examples of current behavior:
+
+```text
+Permission Sets > MyPermSet > Object Permissions
+→ copies: Object Permissions
+
+Permission Sets > MyPermSet > Object Permissions > Case
+→ copies: Case
+
+Permission Sets > MyPermSet > Field Permissions > Account.Name
+→ copies: Account.Name or a raw field-like value without full Permission Set context
+```
 
 ### Impact
 
-- Closing the generated preview can trigger a save/don't-save prompt.
-- The preview can become stale if manifest selections change while it is open.
+- Permission Set folder and child permission entries lose important parent context.
+- Copied values are less useful for troubleshooting, documentation, package planning, or future dependency workflows.
+- The command works well for top-level metadata nodes but feels inconsistent in deeper tree paths.
 
 ### Desired Fix
 
-- Replace the editable temp document with a readonly/live preview or a dedicated manifest selections tree section.
-- Avoid save prompts for generated display-only content.
+Make Copy Full Metadata Path hierarchy-aware for Permission Set nodes.
 
-## Clear Manifest Selections Feedback
+Expected examples:
+
+```text
+Permission Sets > MyPermSet > Object Permissions
+→ PermissionSet: MyPermSet > Object Permissions
+
+Permission Sets > MyPermSet > Object Permissions > Case
+→ PermissionSet: MyPermSet > ObjectPermission: Case
+
+Permission Sets > MyPermSet > Field Permissions > Account.Name
+→ PermissionSet: MyPermSet > FieldPermission: Account.Name
+```
+
+Possible implementation approaches:
+
+- Add enough parent metadata to `MetadataNode` to build richer paths.
+- Add path-specific handling for Permission Set folder and permission entry node types.
+- Consider a small metadata path formatter helper instead of expanding command logic inline.
+
+## Permission Set Loading Progress Text Visibility
 
 ### Issue
 
-Clear Manifest Selections updates the persisted manifest selection state, but any already-open Show Manifest Selections preview does not update.
+Permission Set remote retrieval now shows a progress indicator, but VS Code may display only the progress bar without consistently showing the notification title text.
 
 ### Impact
 
-- The user can clear selections successfully but still see old entries in the open preview.
-- Reopening Show Manifest Selections correctly shows that selections are empty, so the data state is correct but the visual feedback is poor.
+- The user can tell something is loading, but the exact operation may not be obvious.
+- Slow Permission Set retrieves still feel somewhat opaque.
 
 ### Desired Fix
 
-- Close, refresh, or replace the open manifest preview when selections are cleared.
-- Show a clear success message and ensure the status bar count updates immediately.
+Improve loading feedback for slow Permission Set operations.
+
+Possible options:
+
+- Show the Permission Set cache output channel on cache MISS.
+- Add explicit tree placeholder rows such as `Loading remote Permission Set metadata...`.
+- Add a status bar item during Permission Set retrieval.
+- Keep the progress notification but supplement it with output logging that is easier to see.
 
 ## Toolbar and Menu Contributions
 
@@ -50,26 +88,6 @@ Better Org Browser view/title commands previously appeared as checkbox-like menu
 - Clean up `package.json` command/menu contribution rules.
 - Verify title actions render consistently in the tree toolbar and command palette.
 - Re-tighten context menu conditions after broadening them during stabilization.
-
-## Permission Set Cache Visibility
-
-### Issue
-
-Remote Permission Set XML is cached in session, but there is no visible cache hit/miss logging yet.
-
-### Impact
-
-- Cache behavior must be inferred from speed or CLI activity.
-- QA cannot easily prove whether Object Permissions and Field Permissions reused the same retrieved XML.
-
-### Desired Fix
-
-- Add output channel logging such as:
-
-```text
-[PermissionSet Cache MISS] Claygentforce_Support_Manager
-[PermissionSet Cache HIT] Claygentforce_Support_Manager
-```
 
 ## Extension Architecture
 
@@ -123,7 +141,15 @@ Add broader caching and refresh controls for:
 
 - Metadata list responses
 - Object describe responses
-- Permission Set XML responses with visible cache logging
+- Permission Set XML responses beyond the current session-only cache
+
+## Resolved In v0.0.5
+
+The following issues were addressed in the v0.0.5 session and are kept here only as historical reference:
+
+- Manifest Selection Preview opened as an editable temporary document.
+- Clear Manifest Selections did not update an already-open preview.
+- Permission Set cache behavior had no visible cache hit/miss logging.
 
 ## Guardrail
 
