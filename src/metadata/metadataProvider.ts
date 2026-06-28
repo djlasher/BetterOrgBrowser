@@ -225,21 +225,37 @@ export class MetadataProvider implements vscode.TreeDataProvider<MetadataNode> {
         this.logPermissionSetCache(`[Cache MISS] Retrieving remote Permission Set XML for ${permissionSetApiName}`);
 
         try {
-            const root = folders[0].uri;
-            const tempRoot = vscode.Uri.joinPath(root, '.better-org-browser', 'remote-permissions', `${permissionSetApiName}-${Date.now()}`);
-            await vscode.workspace.fs.createDirectory(tempRoot);
-            await this.orgService.retrievePermissionSetMetadataFormat(this.selectedOrgTarget, permissionSetApiName, root.fsPath, tempRoot.fsPath);
-
-            const permissionSetFile = await this.findAnyPermissionSetFile(tempRoot);
-            const bytes = await vscode.workspace.fs.readFile(permissionSetFile);
-            const xml = Buffer.from(bytes).toString('utf8');
-            this.permissionSetXmlCache.set(cacheKey, xml);
-            this.logPermissionSetCache(`[Cache STORE] Cached remote Permission Set XML for ${permissionSetApiName}`);
-
-            return xml;
+            return await vscode.window.withProgress(
+                {
+                    location: vscode.ProgressLocation.Notification,
+                    title: `Loading remote Permission Set metadata for ${permissionSetApiName}`,
+                    cancellable: false
+                },
+                async () => this.retrieveAndCachePermissionSetXml(permissionSetApiName, cacheKey, folders[0].uri)
+            );
         } catch (error) {
             return this.getErrorMessage(error, `Permission Set ${label}`);
         }
+    }
+
+    private async retrieveAndCachePermissionSetXml(permissionSetApiName: string, cacheKey: string, root: vscode.Uri): Promise<string> {
+        if (!this.selectedOrgTarget) {
+            throw new Error('Select a Salesforce org first.');
+        }
+
+        const tempRoot = vscode.Uri.joinPath(root, '.better-org-browser', 'remote-permissions', `${permissionSetApiName}-${Date.now()}`);
+
+        await vscode.workspace.fs.createDirectory(tempRoot);
+        await this.orgService.retrievePermissionSetMetadataFormat(this.selectedOrgTarget, permissionSetApiName, root.fsPath, tempRoot.fsPath);
+
+        const permissionSetFile = await this.findAnyPermissionSetFile(tempRoot);
+        const bytes = await vscode.workspace.fs.readFile(permissionSetFile);
+        const xml = Buffer.from(bytes).toString('utf8');
+
+        this.permissionSetXmlCache.set(cacheKey, xml);
+        this.logPermissionSetCache(`[Cache STORE] Cached remote Permission Set XML for ${permissionSetApiName}`);
+
+        return xml;
     }
 
     private async findAnyPermissionSetFile(root: vscode.Uri): Promise<vscode.Uri> {
