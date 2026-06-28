@@ -9,6 +9,7 @@ export class MetadataProvider implements vscode.TreeDataProvider<MetadataNode> {
 
     private readonly orgService = new OrgService();
     private readonly permissionSetXmlCache = new Map<string, string>();
+    private readonly permissionSetCacheOutputChannel = vscode.window.createOutputChannel('Better Org Browser Permission Set Cache');
 
     private selectedOrgName: string | undefined;
     private selectedOrgTarget: string | undefined;
@@ -18,6 +19,7 @@ export class MetadataProvider implements vscode.TreeDataProvider<MetadataNode> {
 
     refresh(): void {
         this.permissionSetXmlCache.clear();
+        this.logPermissionSetCache('Cache cleared by Better Org Browser refresh.');
         this._onDidChangeTreeData.fire();
     }
 
@@ -25,6 +27,7 @@ export class MetadataProvider implements vscode.TreeDataProvider<MetadataNode> {
         this.selectedOrgName = orgName;
         this.selectedOrgTarget = orgTarget;
         this.permissionSetXmlCache.clear();
+        this.logPermissionSetCache('Cache cleared because the selected org changed.');
         this.refresh();
     }
 
@@ -215,8 +218,11 @@ export class MetadataProvider implements vscode.TreeDataProvider<MetadataNode> {
         const cachedXml = this.permissionSetXmlCache.get(cacheKey);
 
         if (cachedXml) {
+            this.logPermissionSetCache(`[Cache HIT] Using cached remote Permission Set XML for ${permissionSetApiName}`);
             return cachedXml;
         }
+
+        this.logPermissionSetCache(`[Cache MISS] Retrieving remote Permission Set XML for ${permissionSetApiName}`);
 
         try {
             const root = folders[0].uri;
@@ -228,6 +234,7 @@ export class MetadataProvider implements vscode.TreeDataProvider<MetadataNode> {
             const bytes = await vscode.workspace.fs.readFile(permissionSetFile);
             const xml = Buffer.from(bytes).toString('utf8');
             this.permissionSetXmlCache.set(cacheKey, xml);
+            this.logPermissionSetCache(`[Cache STORE] Cached remote Permission Set XML for ${permissionSetApiName}`);
 
             return xml;
         } catch (error) {
@@ -295,6 +302,10 @@ export class MetadataProvider implements vscode.TreeDataProvider<MetadataNode> {
 
     private getPermissionFlagNode(label: string, value: boolean): MetadataNode {
         return new MetadataNode(`${label}: ${value ? 'Yes' : 'No'}`, vscode.TreeItemCollapsibleState.None, value ? 'PermissionGranted' : 'PermissionDenied');
+    }
+
+    private logPermissionSetCache(message: string): void {
+        this.permissionSetCacheOutputChannel.appendLine(`[${new Date().toISOString()}] ${message}`);
     }
 
     private getSelectOrgMessage(): MetadataNode[] {
