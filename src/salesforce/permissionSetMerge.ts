@@ -1,110 +1,59 @@
-const PERMISSION_SET_ENTRY_INDENT = '    ';
-const PERMISSION_SET_CHILD_INDENT = '        ';
-
-const PERMISSION_SET_SECTION_ORDER = [
-    'applicationVisibilities',
-    'classAccesses',
-    'customMetadataTypeAccesses',
-    'customPermissions',
-    'externalDataSourceAccesses',
-    'fieldPermissions',
-    'flowAccesses',
-    'objectPermissions',
-    'pageAccesses',
-    'recordTypeVisibilities',
-    'tabSettings',
-    'userPermissions'
-];
-
-export function findXmlBlockByChildValue(xml: string, blockTagName: string, childTagName: string, childValue: string): string | undefined {
-    return getXmlBlockMatches(xml, blockTagName, childTagName).find((match) => match.childValue === childValue)?.block;
-}
-
-export function mergeXmlBlockByChildValue(localXml: string, remoteBlock: string, blockTagName: string, childTagName: string, childValue: string): string {
-    const normalizedRemoteBlock = normalizePermissionSetBlock(remoteBlock);
-    const existingBlocks = getXmlBlockMatches(localXml, blockTagName, childTagName);
-    const blocksToKeep = existingBlocks
-        .filter((match) => match.childValue !== childValue)
-        .map((match) => normalizePermissionSetBlock(match.block));
-    const sortedBlocks = [...blocksToKeep, normalizedRemoteBlock]
-        .sort((a, b) => (readXmlTagValue(a, childTagName) ?? '').localeCompare(readXmlTagValue(b, childTagName) ?? ''));
-    const xmlWithoutExistingBlocks = removeBlocks(localXml, existingBlocks.map((match) => match.block));
-    const normalizedXml = normalizePermissionSetWhitespace(xmlWithoutExistingBlocks);
-
-    return insertSection(normalizedXml, sortedBlocks.join('\n'), blockTagName);
-}
-
-interface XmlBlockMatch {
-    block: string;
-    childValue: string | undefined;
-    index: number;
-}
-
-function getXmlBlockMatches(xml: string, blockTagName: string, childTagName: string): XmlBlockMatch[] {
-    const pattern = new RegExp(`<${blockTagName}>[\\s\\S]*?<\\/${blockTagName}>`, 'g');
-    const matches: XmlBlockMatch[] = [];
-    let match: RegExpExecArray | null;
-
-    while ((match = pattern.exec(xml)) !== null) {
-        matches.push({
-            block: match[0],
-            childValue: readXmlTagValue(match[0], childTagName),
-            index: match.index
-        });
+import { XMLBuilder } from 'fast-xml-parser';
+import { object, parseXml, text } from '../metadata/parsers/xml';
+interface Span { tag: string; start: number; end: number; xml: string }
+// Locate direct-child byte spans solely for surgical edits. Values and validity
+// are handled by the XML parser, not regular-expression value extraction.
+function spans(xml: string): { entries: Span[]; close: number; prefix: string } {
+    parseXml(xml, 'PermissionSet');
+    const tokens = /<!--[\s\S]*?-->|<!\[CDATA\[[\s\S]*?\]\]>|<\?[\s\S]*?\?>|<\/?[\w:.-]+(?:\s+(?:[^>"']|"[^"]*"|'[^']*')*)?\s*\/?\s*>/g;
+    const entries: Span[] = [];
+    let depth = 0, start = 0, tag = '', close = -1, prefix = '';
+    for (const match of xml.matchAll(tokens)) {
+        const token = match[0], index = match.index!;
+        if (token.startsWith('<!') || token.startsWith('<?')) { continue; }
+        if (token.startsWith('</')) {
+            depth--;
+            if (depth === 1) { entries.push({ tag, start, end: index + token.length, xml: xml.slice(start, index + token.length) }); }
+            if (depth === 0) { close = index; }
+        } else {
+            const qualified = /^<([^\s/>]+)/.exec(token)![1];
+            if (depth === 0) { prefix = qualified.includes(':') ? qualified.split(':')[0] + ':' : ''; }
+            if (depth === 1) { start = index; tag = qualified.split(':').pop()!; }
+            if (/\/\s*>$/.test(token)) {
+                if (depth === 1) { entries.push({ tag, start, end: index + token.length, xml: token }); }
+            } else { depth++; }
+        }
     }
-
-    return matches;
+    if (close < 0) { throw new Error('Permission Set requires an explicit closing element.'); }
+    return { entries, close, prefix };
 }
-
-function removeBlocks(xml: string, blocks: string[]): string {
-    return blocks.reduce((currentXml, block) => currentXml.replace(new RegExp(`\\s*${escapeRegExp(block)}`, 'g'), ''), xml);
+function value(block: string, section: string, key: string): string {
+    return text(object(parseXml(`<PermissionSet>${block}</PermissionSet>`, 'PermissionSet')[section])[key]);
 }
-
-function insertSection(xml: string, sectionXml: string, blockTagName: string): string {
-    const anchorPattern = getInsertAnchorPattern(blockTagName);
-    const anchorMatch = anchorPattern ? xml.match(anchorPattern) : undefined;
-
-    if (anchorMatch?.index !== undefined) {
-        return `${xml.slice(0, anchorMatch.index)}\n${sectionXml}${xml.slice(anchorMatch.index)}`;
+export function findXmlBlockByChildValue(xml: string, section: string, key: string, name: string): string | undefined {
+    return spans(xml).entries.find(entry => entry.tag === section && value(entry.xml, section, key) === name)?.xml;
+}
+export function mergeXmlBlockByChildValue(local: string, remote: string, section: string, key: string, name: string): string {
+    const parsed = parseXml(`<PermissionSet>${remote}</PermissionSet>`, 'PermissionSet');
+    if (Object.keys(parsed).length !== 1 || value(remote, section, key) !== name) { throw new Error('Remote permission entry does not match the requested key.'); }
+    const layout = spans(local);
+    const eol = local.includes('\r\n') ? '\r\n' : '\n';
+    let block = new XMLBuilder({ format: true, indentBy: '    ' }).build({ [section]: parsed[section] }).trim() as string;
+    if (layout.prefix) { block = block.replace(/<(\/?)([\w.-]+)/g, `<$1${layout.prefix}$2`); }
+    block = block.replace(/\n/g, `${eol}    `);
+    const matches = layout.entries.filter(entry => entry.tag === section && value(entry.xml, section, key) === name);
+    if (matches.length > 1) { throw new Error('Local Permission Set contains duplicate entry keys; resolve duplicates before syncing.'); }
+    if (matches.length) {
+        const existing = matches[0];
+        return local.slice(0, existing.start) + block + local.slice(existing.end);
     }
-
-    return xml.replace(/\s*<\/PermissionSet>\s*$/, `\n${sectionXml}\n</PermissionSet>\n`);
-}
-
-function getInsertAnchorPattern(blockTagName: string): RegExp | undefined {
-    const blockIndex = PERMISSION_SET_SECTION_ORDER.indexOf(blockTagName);
-
-    if (blockIndex < 0) {
-        return undefined;
+    const same = layout.entries.filter(entry => entry.tag === section);
+    const next = same.find(entry => value(entry.xml, section, key).localeCompare(name) > 0)
+        ?? layout.entries.find(entry => entry.tag.localeCompare(section) > 0 && !['label', 'description', 'hasActivationRequired', 'license'].includes(entry.tag));
+    if (next) { return local.slice(0, next.start) + block + eol + '    ' + local.slice(next.start); }
+    if (same.length) {
+        const end = same[same.length - 1].end;
+        return local.slice(0, end) + eol + '    ' + block + local.slice(end);
     }
-
-    const laterSections = PERMISSION_SET_SECTION_ORDER.slice(blockIndex + 1);
-    return new RegExp(`\\n[ \\t]*<(${laterSections.join('|')})>`);
-}
-
-function readXmlTagValue(block: string, tagName: string): string | undefined {
-    const pattern = new RegExp(`<${tagName}>([\\s\\S]*?)<\/${tagName}>`);
-    const match = block.match(pattern);
-
-    return match?.[1]?.trim();
-}
-
-function normalizePermissionSetBlock(block: string): string {
-    const lines = block.trim().split(/\r?\n/).map((line) => line.trim());
-
-    return lines
-        .map((line, index) => `${index === 0 || index === lines.length - 1 ? PERMISSION_SET_ENTRY_INDENT : PERMISSION_SET_CHILD_INDENT}${line}`)
-        .join('\n');
-}
-
-function normalizePermissionSetWhitespace(xml: string): string {
-    return xml
-        .replace(/\r\n/g, '\n')
-        .replace(/[ \t]+$/gm, '')
-        .replace(/\n{3,}/g, '\n\n')
-        .replace(/\n\s*<\/PermissionSet>\s*$/, '\n</PermissionSet>\n');
-}
-
-function escapeRegExp(value: string): string {
-    return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    return local.slice(0, layout.close) + '    ' + block + eol + local.slice(layout.close);
 }

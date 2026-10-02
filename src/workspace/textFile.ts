@@ -32,7 +32,7 @@ export async function writeTextFile(uri: vscode.Uri, content: string): Promise<v
         throw new Error(`Could not update open document ${uri.fsPath}.`);
     }
 
-    await openDocument.save();
+    if (!await openDocument.save()) { throw new Error(`Could not save ${uri.fsPath}; the edit remains in the editor.`); }
 }
 
 function findOpenDocument(uri: vscode.Uri): vscode.TextDocument | undefined {

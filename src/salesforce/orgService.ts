@@ -1,5 +1,6 @@
 import { exec, execFile } from 'child_process';
 import * as vscode from 'vscode';
+import { TaskQueue } from '../cache/taskQueue';
 
 export interface SalesforceOrg {
     alias?: string;
@@ -26,6 +27,7 @@ export interface SObjectField {
     createable?: boolean;
     updateable?: boolean;
     calculated?: boolean;
+    custom?: boolean;
 }
 
 interface SfOrgListResult {
@@ -48,7 +50,9 @@ interface SfSObjectDescribeResult {
 }
 
 export class OrgService {
+    private readonly queue = new TaskQueue(3);
     private readonly cliOutputChannel = vscode.window.createOutputChannel('Better Org Browser Salesforce CLI');
+    dispose(): void { this.cliOutputChannel.dispose(); }
 
     public async listAuthorizedOrgs(): Promise<SalesforceOrg[]> {
         const output = await this.runSfCommand(['org', 'list', '--json']);
@@ -69,7 +73,7 @@ export class OrgService {
             .sort((a, b) => this.getOrgDisplayName(a).localeCompare(this.getOrgDisplayName(b)));
     }
 
-    public async listMetadata(targetOrg: string, metadataType: string): Promise<MetadataListItem[]> {
+    public async listMetadata(targetOrg: string, metadataType: string, folder?: string): Promise<MetadataListItem[]> {
         const output = await this.runSfCommand([
             'org',
             'list',
@@ -78,12 +82,13 @@ export class OrgService {
             metadataType,
             '--target-org',
             targetOrg,
-            '--json'
+            '--json',
+            ...(folder ? ['--folder', folder] : [])
         ]);
 
         const parsed = JSON.parse(output) as SfMetadataListResult;
 
-        return (parsed.result ?? [])
+        return [...new Map((parsed.result ?? []).map(item => [item.fullName, item])).values()]
             .filter((item) => Boolean(item.fullName))
             .sort((a, b) => a.fullName.localeCompare(b.fullName));
     }
@@ -142,12 +147,16 @@ export class OrgService {
     }
 
     public async retrievePermissionSetMetadataFormat(targetOrg: string, permissionSetName: string, cwd: string, targetMetadataDir: string): Promise<string> {
+        return this.retrieveMetadataFormat(targetOrg, 'PermissionSet', permissionSetName, cwd, targetMetadataDir);
+    }
+
+    public async retrieveMetadataFormat(targetOrg: string, type: string, name: string, cwd: string, targetMetadataDir: string): Promise<string> {
         return this.runSfCommand([
             'project',
             'retrieve',
             'start',
             '--metadata',
-            `PermissionSet:${permissionSetName}`,
+            `${type}:${name}`,
             '--target-org',
             targetOrg,
             '--single-package',
@@ -185,14 +194,14 @@ export class OrgService {
         this.cliOutputChannel.appendLine(`[${new Date().toISOString()}] cwd: ${cwd ?? process.cwd()}`);
         this.cliOutputChannel.appendLine(`[${new Date().toISOString()}] command: ${commandText}`);
 
-        return process.platform === 'win32'
+        return this.queue.run(() => process.platform === 'win32'
             ? this.runWindowsCommand(commandText, cwd)
-            : this.runFileCommand(executable, args, cwd);
+            : this.runFileCommand(executable, args, cwd));
     }
 
     private runWindowsCommand(commandText: string, cwd?: string): Promise<string> {
         return new Promise((resolve, reject) => {
-            exec(commandText, { cwd }, (error, stdout, stderr) => {
+            exec(commandText, { cwd, maxBuffer: 64 * 1024 * 1024, timeout: 10 * 60 * 1000 }, (error, stdout, stderr) => {
                 this.logCommandResult(stdout, stderr);
 
                 if (error) {
@@ -209,7 +218,7 @@ export class OrgService {
 
     private runFileCommand(executable: string, args: string[], cwd?: string): Promise<string> {
         return new Promise((resolve, reject) => {
-            execFile(executable, args, { cwd }, (error, stdout, stderr) => {
+            execFile(executable, args, { cwd, maxBuffer: 64 * 1024 * 1024, timeout: 10 * 60 * 1000 }, (error, stdout, stderr) => {
                 this.logCommandResult(stdout, stderr);
 
                 if (error) {
@@ -248,7 +257,12 @@ export class OrgService {
     }
 
     private formatArg(arg: string): string {
-        return /\s/.test(arg) ? `"${arg.replace(/"/g, '\\"')}"` : arg;
+        // cmd.exe expands percent variables even inside quotes. Reject shell syntax
+        // instead of allowing org names or remote metadata to become executable code.
+        if (process.platform === 'win32' && /["%\r\n!^&|<>]/.test(arg)) {
+            throw new Error('Unsupported shell character in Salesforce CLI argument.');
+        }
+        return `"${arg}"`;
     }
 
     private getSfExecutableName(): string {

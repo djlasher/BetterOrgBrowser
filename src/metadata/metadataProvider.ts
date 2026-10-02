@@ -1,308 +1,98 @@
 import * as vscode from 'vscode';
 import { MetadataNode } from './metadataNode';
-import { MetadataListItem, OrgService, SObjectField } from '../salesforce/orgService';
-import { FieldPermission, ObjectPermission, parseFieldPermissions, parseObjectPermissions } from '../salesforce/permissionSetParser';
-
-export class MetadataProvider implements vscode.TreeDataProvider<MetadataNode> {
-    private readonly _onDidChangeTreeData: vscode.EventEmitter<MetadataNode | undefined | void> =
-        new vscode.EventEmitter<MetadataNode | undefined | void>();
-
-    private readonly orgService = new OrgService();
-    private readonly permissionSetXmlCache = new Map<string, string>();
-
-    private selectedOrgName: string | undefined;
-    private selectedOrgTarget: string | undefined;
-
-    readonly onDidChangeTreeData: vscode.Event<MetadataNode | undefined | void> =
-        this._onDidChangeTreeData.event;
-
-    refresh(): void {
-        this.permissionSetXmlCache.clear();
-        this._onDidChangeTreeData.fire();
-    }
-
-    setSelectedOrg(orgName: string | undefined, orgTarget: string | undefined): void {
-        this.selectedOrgName = orgName;
-        this.selectedOrgTarget = orgTarget;
-        this.permissionSetXmlCache.clear();
-        this.refresh();
-    }
-
-    getTreeItem(element: MetadataNode): vscode.TreeItem {
-        return element;
-    }
-
-    async getChildren(element?: MetadataNode): Promise<MetadataNode[]> {
-        if (!element) {
-            const rootNodes: MetadataNode[] = [];
-
-            if (this.selectedOrgName) {
-                rootNodes.push(new MetadataNode(`Connected Org: ${this.selectedOrgName}`, vscode.TreeItemCollapsibleState.None, 'SalesforceOrg'));
+import { metadataRegistry, MetadataDefinition } from './metadataRegistry';
+import { MetadataService } from '../salesforce/metadataService';
+import { SessionCache } from '../cache/sessionCache';
+export class MetadataProvider implements vscode.TreeDataProvider<MetadataNode>, vscode.Disposable {
+    private readonly changed = new vscode.EventEmitter<MetadataNode | undefined | void>();
+    readonly onDidChangeTreeData = this.changed.event;
+    private readonly children = new SessionCache<MetadataNode[]>();
+    private roots: MetadataNode[] = [];
+    private generation = 0;
+    selectedOrgTarget?: string;
+    selectedOrgName?: string;
+    constructor(readonly service: MetadataService) {}
+    dispose(): void { this.changed.dispose(); }
+    refresh(): void { this.generation++; this.service.clear(); this.children.clear(); this.roots = []; this.changed.fire(); }
+    setSelectedOrg(label?: string, target?: string): void { this.selectedOrgName = label; this.selectedOrgTarget = target; this.refresh(); }
+    getTreeItem(node: MetadataNode): vscode.TreeItem { return node; }
+    getParent(node: MetadataNode): MetadataNode | undefined { return node.parent; }
+    async getChildren(node?: MetadataNode): Promise<MetadataNode[]> {
+        if (!node) {
+            if (!this.selectedOrgTarget) { return [new MetadataNode({ label: 'Select a Salesforce org to browse', kind: 'Info' })]; }
+            if (!this.roots.length) {
+                const org = this.selectedOrgTarget;
+                this.roots = metadataRegistry.map(def => {
+                    const root = new MetadataNode({ label: def.label, kind: 'root' });
+                    root.definition = def; root.org = org; root.iconPath = new vscode.ThemeIcon(def.icon);
+                    return root.expandable(() => this.list(root, def, org));
+                });
             }
-
-            rootNodes.push(
-                new MetadataNode('Custom Objects', vscode.TreeItemCollapsibleState.Collapsed, 'CustomObjectRoot'),
-                new MetadataNode('Apex Classes', vscode.TreeItemCollapsibleState.Collapsed, 'ApexClassRoot'),
-                new MetadataNode('Flows', vscode.TreeItemCollapsibleState.Collapsed, 'FlowRoot'),
-                new MetadataNode('Permission Sets', vscode.TreeItemCollapsibleState.Collapsed, 'PermissionSetRoot')
-            );
-
-            return rootNodes;
+            return this.roots;
         }
-
-        switch (element.metadataType) {
-            case 'CustomObjectRoot':
-                return this.getCustomObjects();
-            case 'CustomObject':
-                return [new MetadataNode('Fields', vscode.TreeItemCollapsibleState.Collapsed, 'FieldFolder', undefined, element.apiName)];
-            case 'FieldFolder':
-                return this.getObjectFields(element.parentApiName);
-            case 'ApexClassRoot':
-                return this.getApexClasses();
-            case 'FlowRoot':
-                return this.getFlows();
-            case 'PermissionSetRoot':
-                return this.getPermissionSets();
-            case 'PermissionSet':
-                return this.getPermissionSetFolders(element.apiName);
-            case 'PermissionSetObjectPermissionsFolder':
-                return this.getPermissionSetObjectPermissions(element.parentApiName);
-            case 'PermissionSetFieldPermissionsFolder':
-                return this.getPermissionSetFieldPermissions(element.parentApiName);
-            case 'PermissionSetObjectPermission':
-                return this.getObjectPermissionDetails(element.objectPermission);
-            case 'PermissionSetFieldPermission':
-                return this.getFieldPermissionDetails(element.fieldPermission);
-            default:
-                return [];
-        }
-    }
-
-    private async getCustomObjects(): Promise<MetadataNode[]> {
-        if (!this.selectedOrgTarget) {
-            return this.getSelectOrgMessage();
-        }
-
+        if (node.org && node.org !== this.selectedOrgTarget) { return []; }
+        if (node.children) { return node.children; }
+        if (!node.loader) { return []; }
+        const generation = this.generation;
         try {
-            const customObjects = await this.orgService.listCustomObjects(this.selectedOrgTarget);
-            return customObjects.map((customObject: MetadataListItem) =>
-                new MetadataNode(customObject.fullName, vscode.TreeItemCollapsibleState.Collapsed, 'CustomObject', customObject.fullName, undefined, undefined, 'CustomObject')
-            );
+            const result = await this.children.get(node.id!, async () => vscode.window.withProgress(
+                { location: { viewId: 'betterOrgBrowserView' }, title: `Loading ${node.label}` }, node.loader!));
+            return generation === this.generation ? (result.length ? result : [new MetadataNode({ label: 'No available entries', kind: 'Info' }, node)]) : [];
         } catch (error) {
-            return this.getErrorMessage(error, 'Custom Object');
+            return [new MetadataNode({ label: `Unable to load: ${error instanceof Error ? error.message : String(error)}`, kind: 'Error' }, node)];
         }
     }
-
-    private async getObjectFields(objectApiName?: string): Promise<MetadataNode[]> {
-        if (!this.selectedOrgTarget || !objectApiName) {
-            return this.getSelectOrgMessage();
+    private async list(parent: MetadataNode, def: MetadataDefinition, org: string, folder?: string): Promise<MetadataNode[]> {
+        if (def.singleton) {
+            return def.parse!(await this.service.xml(org, def, def.singleton), def.singleton).map(data => new MetadataNode(data, parent));
         }
-
-        try {
-            const fields = await this.orgService.describeSObject(this.selectedOrgTarget, objectApiName);
-            return fields.map((field: SObjectField) =>
-                new MetadataNode(field.name, vscode.TreeItemCollapsibleState.None, field.type ?? 'Field', field.name, objectApiName, field, 'CustomField')
-            );
-        } catch (error) {
-            return this.getErrorMessage(error, 'Field');
+        if (def.folderType && !folder) {
+            const folders = await this.service.list(org, def.folderType);
+            return folders.map(item => {
+                const node = new MetadataNode({ label: item.fullName, name: item.fullName, kind: 'Folder' }, parent);
+                return node.expandable(() => this.list(node, def, org, item.fullName));
+            });
         }
-    }
-
-    private async getApexClasses(): Promise<MetadataNode[]> {
-        if (!this.selectedOrgTarget) {
-            return this.getSelectOrgMessage();
-        }
-
-        try {
-            const apexClasses = await this.orgService.listApexClasses(this.selectedOrgTarget);
-            return apexClasses.map((apexClass: MetadataListItem) =>
-                new MetadataNode(apexClass.fullName, vscode.TreeItemCollapsibleState.None, apexClass.type ?? 'ApexClass', apexClass.fullName, undefined, undefined, 'ApexClass')
-            );
-        } catch (error) {
-            return this.getErrorMessage(error, 'Apex metadata');
-        }
-    }
-
-    private async getFlows(): Promise<MetadataNode[]> {
-        if (!this.selectedOrgTarget) {
-            return this.getSelectOrgMessage();
-        }
-
-        try {
-            const flows = await this.orgService.listFlows(this.selectedOrgTarget);
-            return flows.map((flow: MetadataListItem) =>
-                new MetadataNode(flow.fullName, vscode.TreeItemCollapsibleState.None, flow.type ?? 'Flow', flow.fullName, undefined, undefined, 'Flow')
-            );
-        } catch (error) {
-            return this.getErrorMessage(error, 'Flow metadata');
-        }
-    }
-
-    private async getPermissionSets(): Promise<MetadataNode[]> {
-        if (!this.selectedOrgTarget) {
-            return this.getSelectOrgMessage();
-        }
-
-        try {
-            const permissionSets = await this.orgService.listPermissionSets(this.selectedOrgTarget);
-            return permissionSets.map((permissionSet: MetadataListItem) =>
-                new MetadataNode(permissionSet.fullName, vscode.TreeItemCollapsibleState.Collapsed, permissionSet.type ?? 'PermissionSet', permissionSet.fullName, undefined, undefined, 'PermissionSet')
-            );
-        } catch (error) {
-            return this.getErrorMessage(error, 'Permission Set metadata');
-        }
-    }
-
-    private getPermissionSetFolders(permissionSetApiName?: string): MetadataNode[] {
-        return [
-            new MetadataNode('Object Permissions', vscode.TreeItemCollapsibleState.Collapsed, 'PermissionSetObjectPermissionsFolder', undefined, permissionSetApiName),
-            new MetadataNode('Field Permissions', vscode.TreeItemCollapsibleState.Collapsed, 'PermissionSetFieldPermissionsFolder', undefined, permissionSetApiName),
-            new MetadataNode('Apex Class Access', vscode.TreeItemCollapsibleState.Collapsed, 'PermissionSetFolder', undefined, permissionSetApiName),
-            new MetadataNode('Flow Access', vscode.TreeItemCollapsibleState.Collapsed, 'PermissionSetFolder', undefined, permissionSetApiName),
-            new MetadataNode('Custom Permissions', vscode.TreeItemCollapsibleState.Collapsed, 'PermissionSetFolder', undefined, permissionSetApiName),
-            new MetadataNode('Tab Settings', vscode.TreeItemCollapsibleState.Collapsed, 'PermissionSetFolder', undefined, permissionSetApiName),
-            new MetadataNode('User Permissions', vscode.TreeItemCollapsibleState.Collapsed, 'PermissionSetFolder', undefined, permissionSetApiName)
-        ];
-    }
-
-    private async getPermissionSetObjectPermissions(permissionSetApiName?: string): Promise<MetadataNode[]> {
-        const xml = await this.getPermissionSetXml(permissionSetApiName, 'object permission');
-
-        if (Array.isArray(xml)) {
-            return xml;
-        }
-
-        const permissions = parseObjectPermissions(xml);
-
-        if (!permissions.length) {
-            return [new MetadataNode('No object permissions found', vscode.TreeItemCollapsibleState.None, 'Info')];
-        }
-
-        return permissions.map((permission) =>
-            new MetadataNode(permission.object, vscode.TreeItemCollapsibleState.Collapsed, 'PermissionSetObjectPermission', permission.object, permissionSetApiName, undefined, undefined, permission)
-        );
-    }
-
-    private async getPermissionSetFieldPermissions(permissionSetApiName?: string): Promise<MetadataNode[]> {
-        const xml = await this.getPermissionSetXml(permissionSetApiName, 'field permission');
-
-        if (Array.isArray(xml)) {
-            return xml;
-        }
-
-        const permissions = parseFieldPermissions(xml);
-
-        if (!permissions.length) {
-            return [new MetadataNode('No field permissions found', vscode.TreeItemCollapsibleState.None, 'Info')];
-        }
-
-        return permissions.map((permission) =>
-            new MetadataNode(permission.field, vscode.TreeItemCollapsibleState.Collapsed, 'PermissionSetFieldPermission', permission.field, permissionSetApiName, undefined, undefined, undefined, permission)
-        );
-    }
-
-    private async getPermissionSetXml(permissionSetApiName: string | undefined, label: string): Promise<string | MetadataNode[]> {
-        if (!this.selectedOrgTarget || !permissionSetApiName) {
-            return this.getSelectOrgMessage();
-        }
-
-        const folders = vscode.workspace.workspaceFolders;
-        if (!folders?.length) {
-            return [new MetadataNode('Open an SFDX project to inspect permission set details', vscode.TreeItemCollapsibleState.None, 'Info')];
-        }
-
-        const cacheKey = `${this.selectedOrgTarget}:${permissionSetApiName}`;
-        const cachedXml = this.permissionSetXmlCache.get(cacheKey);
-
-        if (cachedXml) {
-            return cachedXml;
-        }
-
-        try {
-            const root = folders[0].uri;
-            const tempRoot = vscode.Uri.joinPath(root, '.better-org-browser', 'remote-permissions', `${permissionSetApiName}-${Date.now()}`);
-            await vscode.workspace.fs.createDirectory(tempRoot);
-            await this.orgService.retrievePermissionSetMetadataFormat(this.selectedOrgTarget, permissionSetApiName, root.fsPath, tempRoot.fsPath);
-
-            const permissionSetFile = await this.findAnyPermissionSetFile(tempRoot);
-            const bytes = await vscode.workspace.fs.readFile(permissionSetFile);
-            const xml = Buffer.from(bytes).toString('utf8');
-            this.permissionSetXmlCache.set(cacheKey, xml);
-
-            return xml;
-        } catch (error) {
-            return this.getErrorMessage(error, `Permission Set ${label}`);
-        }
-    }
-
-    private async findAnyPermissionSetFile(root: vscode.Uri): Promise<vscode.Uri> {
-        const found = await this.findFileBySuffix(root, ['.permissionset-meta.xml', '.permissionset']);
-
-        if (!found) {
-            throw new Error('Could not find any retrieved permission set file.');
-        }
-
-        return found;
-    }
-
-    private async findFileBySuffix(root: vscode.Uri, suffixes: string[]): Promise<vscode.Uri | undefined> {
-        const entries = await vscode.workspace.fs.readDirectory(root);
-
-        for (const [name, type] of entries) {
-            const child = vscode.Uri.joinPath(root, name);
-
-            if (type === vscode.FileType.File && suffixes.some((suffix) => name.endsWith(suffix))) {
-                return child;
+        const items = await this.service.list(org, def.type, folder);
+        return items.map(item => {
+            const node = new MetadataNode({ label: item.fullName, name: item.fullName, kind: def.type,
+                description: item.namespacePrefix || item.manageableState || undefined,
+                manifest: { type: def.type, member: item.fullName } }, parent);
+            node.definition = def; node.iconPath = new vscode.ThemeIcon(def.icon);
+            if (def.type === 'CustomObject') {
+                node.expandable(async () => {
+                    const metadataFields = new Set<string>();
+                    const fields = new MetadataNode({ label: 'Fields', kind: 'section' }, node);
+                    fields.expandable(async () => (await this.service.describe(org, item.fullName)).map(field => {
+                        const child = new MetadataNode({ label: field.name, name: field.name, kind: 'CustomField', description: field.type,
+                            manifest: field.custom || field.name.endsWith('__c') || metadataFields.has(field.name)
+                                ? { type: 'CustomField', member: `${item.fullName}.${field.name}` } : undefined,
+                            details: { ...field } }, fields);
+                        child.fieldDetails = field; child.contextValue += ':field'; return child;
+                    }));
+                    // The describe-backed Fields folder remains available if metadata retrieval fails.
+                    try {
+                        const parsed = def.parse!(await this.service.xml(org, def, item.fullName), item.fullName);
+                        for (const field of parsed.find(section => section.label === 'Fields')?.children ?? []) {
+                            if (field.name) { metadataFields.add(field.name); }
+                        }
+                        const sections = parsed.filter(section => section.label !== 'Fields');
+                        return [fields, ...sections.map(data => new MetadataNode(data, node))];
+                    } catch (error) {
+                        return [fields, new MetadataNode({ label: `Object metadata unavailable: ${String(error)}`, kind: 'Error' }, node)];
+                    }
+                });
+            } else if (def.parse) {
+                node.expandable(async () => def.parse!(await this.service.xml(org, def, item.fullName), item.fullName).map(data => new MetadataNode(data, node)));
+            } else if (def.bundle) {
+                node.expandable(async () => (await this.service.remoteFiles(org, def.type, item.fullName))
+                    .filter(file => file.path.includes(`/${def.bundle}/${item.fullName}/`) || file.path.startsWith(`${def.bundle}/${item.fullName}/`))
+                    .map(file => {
+                        const child = new MetadataNode({ label: file.path.split(`/${item.fullName}/`).pop()!, kind: 'BundleFile', name: file.path.split(`/${item.fullName}/`).pop() }, node);
+                        child.remoteContent = file.content; return child;
+                    }));
             }
-
-            if (type === vscode.FileType.Directory) {
-                const found = await this.findFileBySuffix(child, suffixes);
-
-                if (found) {
-                    return found;
-                }
-            }
-        }
-
-        return undefined;
-    }
-
-    private getObjectPermissionDetails(permission?: ObjectPermission): MetadataNode[] {
-        if (!permission) {
-            return [new MetadataNode('No permission details available', vscode.TreeItemCollapsibleState.None, 'Info')];
-        }
-
-        return [
-            this.getPermissionFlagNode('Read', permission.allowRead),
-            this.getPermissionFlagNode('Create', permission.allowCreate),
-            this.getPermissionFlagNode('Edit', permission.allowEdit),
-            this.getPermissionFlagNode('Delete', permission.allowDelete),
-            this.getPermissionFlagNode('View All Records', permission.viewAllRecords),
-            this.getPermissionFlagNode('Modify All Records', permission.modifyAllRecords)
-        ];
-    }
-
-    private getFieldPermissionDetails(permission?: FieldPermission): MetadataNode[] {
-        if (!permission) {
-            return [new MetadataNode('No permission details available', vscode.TreeItemCollapsibleState.None, 'Info')];
-        }
-
-        return [
-            this.getPermissionFlagNode('Readable', permission.readable),
-            this.getPermissionFlagNode('Editable', permission.editable)
-        ];
-    }
-
-    private getPermissionFlagNode(label: string, value: boolean): MetadataNode {
-        return new MetadataNode(`${label}: ${value ? 'Yes' : 'No'}`, vscode.TreeItemCollapsibleState.None, value ? 'PermissionGranted' : 'PermissionDenied');
-    }
-
-    private getSelectOrgMessage(): MetadataNode[] {
-        return [new MetadataNode('Select a Salesforce org first', vscode.TreeItemCollapsibleState.None, 'Info')];
-    }
-
-    private getErrorMessage(error: unknown, label: string): MetadataNode[] {
-        const message = error instanceof Error ? error.message : `Unknown ${label} error`;
-        return [new MetadataNode(`Error: ${message}`, vscode.TreeItemCollapsibleState.None, 'Error')];
+            return node;
+        });
     }
 }

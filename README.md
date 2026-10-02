@@ -1,157 +1,74 @@
 # BetterOrgBrowser
 
-A VS Code extension for a more granular Salesforce org browser.
-
-BetterOrgBrowser is intended to make Salesforce metadata exploration and retrieval feel closer to a purpose-built developer tool than a flat metadata list. Instead of only browsing broad metadata types, BetterOrgBrowser lets developers drill into nested metadata, select exactly what they need, generate manifests, and sync granular Permission Set entries into a local working copy.
-
-## Why this exists
-
-Salesforce orgs get huge. Standard org browsing tools are useful, but they can become slow or too coarse when you only need a specific field, permission, Flow subcomponent, or related dependency.
-
-BetterOrgBrowser is intended to help with:
-
-- Tree-based exploration of Salesforce metadata.
-- Granular selection of nested metadata components.
-- Package.xml generation from selected items.
-- One-click sync of selected Permission Set entries into local Permission Set XML.
-- Optional dependency inclusion.
-- Future dependency and impact analysis.
-- Faster workflows in very large Salesforce orgs.
-
-## MVP vision
-
-The first working version focuses on a narrow but valuable slice:
-
-1. Add a VS Code sidebar view named **Better Org Browser**.
-2. Select and persist a Salesforce org from locally authorized Salesforce CLI orgs.
-3. Display live metadata categories.
-4. Expand common metadata types such as objects, fields, Apex classes, flows, and permission sets.
-5. Allow selecting metadata nodes for retrieval.
-6. Generate a `package.xml` from selected items.
-7. Retrieve metadata from a generated manifest.
-8. Browse remote Permission Set internals and sync selected entries into the local working copy.
-
-## Current project status
-
-The extension currently has a working end-to-end MVP flow in the VS Code Extension Development Host.
-
-Confirmed working:
-
-- Salesforce org picker.
-- Persisted selected org.
-- Live browsing for Apex Classes, Flows, Custom Objects, Object Fields, and Permission Sets.
-- Field details inspection.
-- Copy API Name.
-- Add/Remove/Clear/Show Manifest Selections.
-- Persisted manifest selections.
-- Preview and write `manifest/package.xml`.
-- Retrieve Manifest with a friendly summary.
-- Salesforce CLI output logging.
-- Permission Set deep browser shell.
-- Parsed Permission Set Object Permissions.
-- Parsed Permission Set Field Permissions.
-- Inline Sync Field Permission Entry command.
-
-The most important differentiator currently working is:
-
-```text
-Git has a trimmed Permission Set
-→ org has the full Permission Set
-→ browse remote Field Permissions
-→ click sync on one field permission
-→ local Permission Set XML receives only that one fieldPermissions block
-```
-
-This keeps Git diffs small and avoids manually copying Permission Set XML from a full retrieve.
-
-## Known follow-up items
-
-- Synced Field Permission entries currently append near the bottom before the closing PermissionSet tag; later they should be inserted in sorted/stable order with existing field permissions.
-- Object Permission sync should be added using the same pattern.
-- `extension.ts` should be modularized into smaller command/service files.
-- Remote Permission Set XML should be cached during a session to avoid repeated retrieves.
-- More Permission Set folders should be parsed: Apex Class Access, Flow Access, Custom Permissions, Tab Settings, and User Permissions.
+A native VS Code Salesforce metadata tree that keeps drilling into meaningful metadata children. Browse, select valid package members, retrieve source, and sync one remote Permission Set entry into a trimmed local file.
 
 ## Getting started
 
-Clone the repo:
-
-```bash
-git clone https://github.com/djlasher/BetterOrgBrowser.git
-cd BetterOrgBrowser
-```
-
-Install dependencies:
-
-```bash
-npm install
-```
-
-Compile:
-
-```bash
+```sh
+npm ci
 npm run compile
+npm test
 ```
 
-Open in VS Code:
+Open this extension repository in VS Code and press F5. In the Extension Development Host, open a **separate Salesforce DX project**, then use **Better Org Browser: Select Salesforce Org**. Authenticate beforehand with Salesforce CLI (`sf org login web`). This repository is not an SFDX project.
 
-```bash
-code .
-```
+## Browsing
 
-Then press `F5` to launch the Extension Development Host.
-
-Open the Activity Bar view named **Better Org Browser**.
-
-## Suggested local prerequisites
-
-Install and authenticate with Salesforce CLI:
-
-```bash
-sf org login web --alias my-dev-org
-sf org list
-```
-
-For retrieve and Permission Set sync testing, open a separate Salesforce DX project in the Extension Development Host. Keep this extension repo as a VS Code extension repo, not an SFDX project.
-
-## Folder structure
+Metadata is grouped by type in a native TreeView. Roots load on expansion, and component XML is retrieved only when a component is expanded. Right-click **Inspect Metadata** for details or a bundle file preview. **Copy Full Metadata Path** preserves semantic ancestors, for example:
 
 ```text
-.
-├── .vscode/                    # VS Code launch/tasks config
-├── docs/
-│   ├── ROADMAP.md              # Project roadmap and next priorities
-│   └── SESSION_NOTES.md        # Current state for resuming work
-├── src/
-│   ├── extension.ts            # Extension activation and command registration
-│   ├── metadata/
-│   │   ├── metadataNode.ts     # Tree node model
-│   │   └── metadataProvider.ts # Tree data provider
-│   ├── packageXml/
-│   │   ├── manifestSelectionStore.ts
-│   │   └── packageXmlBuilder.ts
-│   └── salesforce/
-│       ├── orgService.ts
-│       ├── permissionSetParser.ts
-│       ├── retrieveResultFormatter.ts
-│       └── selectedOrgStore.ts
-├── package.json                # VS Code extension manifest
-├── tsconfig.json               # TypeScript compiler config
-└── README.md
+CustomObject: Account > ValidationRule: Require_Industry
+PermissionSet: Sales_User > ApexClassAccess: MyController
+Flow: Automation > Screen: Customer_Details > Component: Email
 ```
 
-## Development notes
+Implemented roots and depth:
 
-This extension is intentionally being built in TypeScript because VS Code extensions are Node-based and the official VS Code extension API is TypeScript-friendly.
+| Metadata | Browsing |
+| --- | --- |
+| CustomObject | Describe-backed Fields; retrieved Record Types, Validation Rules, Field Sets, List Views, Compact Layouts, Web Links, Business Processes, Sharing Reasons, Indexes; inspectable Search Layouts |
+| Flow | Variables, constants, formulas, screens and nested components, decisions and rules, assignments, loops, record operations, subflows, actions, waits/events, collection processors, transforms, start configuration |
+| PermissionSet | Object/field permissions, Apex class access, Flow access, custom permissions, tabs, user permissions, record types, pages, applications, custom metadata types, external data sources; values and single-entry sync |
+| Profile | Available permission sections and tab visibilities; browse only, no entry sync |
+| LightningComponentBundle / AuraDefinitionBundle | Files returned by Salesforce, including nested file paths; inspectable source |
+| Layout | Sections, columns, items, related lists |
+| FlexiPage | Regions and component/field instances |
+| PermissionSetGroup | Referenced Permission Sets, selectable as PermissionSet members |
+| CustomApplication | Tabs |
+| CustomLabels | Aggregate retrieval followed by individual CustomLabel entries |
+| CustomMetadata | Records and field values |
+| Report / Dashboard / EmailTemplate | Folder-aware component listing |
+| ApexClass, ApexTrigger, CustomTab, StaticResource, Queue, Group, NamedCredential, ExternalCredential, AuthProvider, ConnectedApp, RemoteSiteSetting, CustomPermission | Component listing and manifest selection |
 
-Recommended next implementation steps:
+Custom metadata type definitions (`__mdt`) appear under Custom Objects; their records appear under Custom Metadata Records. Empty optional XML sections are omitted. Unsupported or inaccessible metadata produces a local error row rather than disabling the browser.
 
-1. Add sorted/stable insertion for synced Field Permission entries.
-2. Add Sync Object Permission Entry.
-3. Refactor `extension.ts` into smaller modules.
-4. Add remote Permission Set XML caching.
-5. Fill more Permission Set folders.
-6. Add right-click and inline commands for selected metadata retrieval.
+## Select, retrieve, and sync
+
+- **Add / Remove from Manifest**, **Clear / Show Manifest Selections**, **Preview Manifest**, **Write Manifest to File**, and the persisted status bar count remain available.
+- **Retrieve Selected Metadata** uses the current selections through a temporary manifest and retrieves into the selected SFDX project using normal CLI source behavior. It does not replace `manifest/package.xml`.
+- **Retrieve Manifest** retrieves the existing project manifest. Retrieval summaries and detailed CLI output remain available.
+- **Sync Permission Set Entry** appears inline on supported permission entries. Field/Object sync command IDs remain registered for compatibility. The full remote Permission Set is cached outside the source tree; only the chosen entry is merged into an existing local Permission Set. Package directories come from `sfdx-project.json`; multiple matching files prompt for a target. Open documents are edited and saved through VS Code.
+- **Search Metadata** is a staged QuickPick: choose/filter a type, then a component or folder, then deeper children. Selection reveals the node. It does not crawl the entire org.
+
+Browsable does not imply independently retrievable. Flow screens, layout items, record values, indexes, permission entries, and bundle files cannot be added to the manifest here. Select their containing component instead. Describe fields remain inspectable; only custom fields or fields also returned in CustomObject metadata receive manifest actions.
+
+## Architecture and caching
+
+`extension.ts` wires services and command modules. The declarative registry controls metadata roots and parser selection. Pure semantic parsers and the node model are separate from VS Code rendering. `OrgService` owns all CLI execution, including Windows `sf.cmd` support, logs, process timeout/buffer limits, and a three-process concurrency limit.
+
+Promise caches coalesce metadata lists, describes, and component retrievals by org/type/member. **Refresh** and org changes invalidate the session caches; failed requests can retry. Cache HIT/MISS/STORE messages appear in **Better Org Browser Cache**. Metadata-format retrieval uses unique OS temporary directories removed in `finally`, including on failure. Browsing does not retrieve metadata into project source.
+
+## Validation and limitations
+
+`npm test` compiles and runs Node unit/integration tests without launching VS Code. Tests cover manifests, paths, semantic XML parsing, minimal Permission Set merges, concurrency/cache races, and tree behavior. See [manual QA](docs/TEST_PLAN.md).
+
+- Live org availability, permissions, API versions, managed packages, and Metadata API list limits affect results. Listing has no pagination beyond the CLI response; very large types may be truncated upstream.
+- Profile/Permission Set XML can be incomplete because Salesforce filters permissions by retrieved metadata and access. This browser displays what the API returns; it never claims an omitted permission is false.
+- Layout, FlexiPage, application and Flow browsing exposes the semantic sections listed above, not every Salesforce XML feature. Remaining details are inspectable JSON. Screen nesting is bounded at 16 levels.
+- Search is scoped to the selected type/branch, not a global recursive index. There is no dependency analysis or deploy functionality.
+- XML parsing is synchronous per retrieved component. Very large individual XML files can briefly occupy the extension host; a worker parser remains future work. Caches last until refresh, org change, or session end.
+- CLI processes time out after ten minutes; there is no interactive cancellation. Windows arguments containing shell metacharacters are rejected rather than executed.
+- A supported desktop Node extension host and installed Salesforce CLI are required. Live Extension Development Host and authenticated-org QA must be completed before release.
 
 ## License
 

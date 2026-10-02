@@ -11,20 +11,7 @@
     "Other"
   ],
   "activationEvents": [
-    "onView:betterOrgBrowserView",
-    "onCommand:betterOrgBrowser.refresh",
-    "onCommand:betterOrgBrowser.selectOrg",
-    "onCommand:betterOrgBrowser.showFieldDetails",
-    "onCommand:betterOrgBrowser.copyApiName",
-    "onCommand:betterOrgBrowser.addToManifest",
-    "onCommand:betterOrgBrowser.removeFromManifest",
-    "onCommand:betterOrgBrowser.clearManifestSelections",
-    "onCommand:betterOrgBrowser.showManifestSelections",
-    "onCommand:betterOrgBrowser.previewManifest",
-    "onCommand:betterOrgBrowser.writeManifest",
-    "onCommand:betterOrgBrowser.retrieveManifest",
-    "onCommand:betterOrgBrowser.syncFieldPermissionEntry",
-    "onCommand:betterOrgBrowser.syncObjectPermissionEntry"
+    "onView:betterOrgBrowserView"
   ],
   "main": "./out/extension.js",
   "contributes": {
@@ -33,7 +20,7 @@
         {
           "id": "betterOrgBrowser",
           "title": "Better Org Browser",
-          "icon": "$(database)"
+          "icon": "media/icon.svg"
         }
       ]
     },
@@ -102,40 +89,67 @@
         "command": "betterOrgBrowser.syncObjectPermissionEntry",
         "title": "Better Org Browser: Sync Object Permission Entry",
         "icon": "$(cloud-download)"
+      },
+      {
+        "command": "betterOrgBrowser.copyFullMetadataPath",
+        "title": "Better Org Browser: Copy Full Metadata Path"
+      },
+      {
+        "command": "betterOrgBrowser.showMetadataDetails",
+        "title": "Better Org Browser: Inspect Metadata"
+      },
+      {
+        "command": "betterOrgBrowser.searchMetadata",
+        "title": "Better Org Browser: Search Metadata",
+        "icon": "$(search)"
+      },
+      {
+        "command": "betterOrgBrowser.retrieveSelectedMetadata",
+        "title": "Better Org Browser: Retrieve Selected Metadata",
+        "icon": "$(cloud-download)"
+      },
+      {
+        "command": "betterOrgBrowser.syncPermissionSetEntry",
+        "title": "Better Org Browser: Sync Permission Set Entry",
+        "icon": "$(cloud-download)"
       }
     ],
     "menus": {
-      "view item/context": [],
       "view/item/context": [
         {
-          "command": "betterOrgBrowser.syncFieldPermissionEntry",
-          "when": "view == betterOrgBrowserView && viewItem == PermissionSetFieldPermission",
-          "group": "inline@1"
-        },
-        {
-          "command": "betterOrgBrowser.syncObjectPermissionEntry",
-          "when": "view == betterOrgBrowserView && viewItem == PermissionSetObjectPermission",
+          "command": "betterOrgBrowser.syncPermissionSetEntry",
+          "when": "view == betterOrgBrowserView && viewItem =~ /:sync/",
           "group": "inline@1"
         },
         {
           "command": "betterOrgBrowser.addToManifest",
-          "when": "view == betterOrgBrowserView",
+          "when": "view == betterOrgBrowserView && viewItem =~ /:manifest/",
           "group": "navigation@1"
         },
         {
           "command": "betterOrgBrowser.removeFromManifest",
-          "when": "view == betterOrgBrowserView",
+          "when": "view == betterOrgBrowserView && viewItem =~ /:manifest/",
           "group": "navigation@2"
         },
         {
           "command": "betterOrgBrowser.showFieldDetails",
-          "when": "view == betterOrgBrowserView",
+          "when": "view == betterOrgBrowserView && viewItem =~ /:field/",
           "group": "navigation@3"
         },
         {
-          "command": "betterOrgBrowser.copyApiName",
-          "when": "view == betterOrgBrowserView",
+          "command": "betterOrgBrowser.showMetadataDetails",
+          "when": "view == betterOrgBrowserView && viewItem =~ /^node/",
           "group": "navigation@4"
+        },
+        {
+          "command": "betterOrgBrowser.copyApiName",
+          "when": "view == betterOrgBrowserView && viewItem =~ /^node/",
+          "group": "navigation@5"
+        },
+        {
+          "command": "betterOrgBrowser.copyFullMetadataPath",
+          "when": "view == betterOrgBrowserView && viewItem =~ /^node/",
+          "group": "navigation@6"
         }
       ],
       "view/title": [
@@ -153,17 +167,74 @@
           "command": "betterOrgBrowser.refresh",
           "when": "view == betterOrgBrowserView",
           "group": "navigation@3"
+        },
+        {
+          "command": "betterOrgBrowser.selectOrg",
+          "when": "view == betterOrgBrowserView",
+          "group": "navigation@4"
+        },
+        {
+          "command": "betterOrgBrowser.searchMetadata",
+          "when": "view == betterOrgBrowserView",
+          "group": "navigation@5"
+        },
+        {
+          "command": "betterOrgBrowser.retrieveSelectedMetadata",
+          "when": "view == betterOrgBrowserView",
+          "group": "navigation@6"
+        }
+      ],
+      "commandPalette": [
+        {
+          "command": "betterOrgBrowser.syncFieldPermissionEntry",
+          "when": "false"
+        },
+        {
+          "command": "betterOrgBrowser.syncObjectPermissionEntry",
+          "when": "false"
+        },
+        {
+          "command": "betterOrgBrowser.syncPermissionSetEntry",
+          "when": "false"
+        },
+        {
+          "command": "betterOrgBrowser.showFieldDetails",
+          "when": "false"
+        },
+        {
+          "command": "betterOrgBrowser.showMetadataDetails",
+          "when": "false"
+        },
+        {
+          "command": "betterOrgBrowser.copyApiName",
+          "when": "false"
+        },
+        {
+          "command": "betterOrgBrowser.copyFullMetadataPath",
+          "when": "false"
+        },
+        {
+          "command": "betterOrgBrowser.addToManifest",
+          "when": "false"
+        },
+        {
+          "command": "betterOrgBrowser.removeFromManifest",
+          "when": "false"
         }
       ]
     }
   },
   "scripts": {
     "compile": "tsc -p ./",
-    "watch": "tsc -watch -p ./"
+    "watch": "tsc -watch -p ./",
+    "test": "npm run compile && node --test tests/*.test.cjs"
   },
   "devDependencies": {
     "@types/node": "^20.14.2",
     "@types/vscode": "^1.90.0",
     "typescript": "^5.5.2"
+  },
+  "dependencies": {
+    "fast-xml-parser": "^5.11.2"
   }
 }
