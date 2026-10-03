@@ -60,15 +60,15 @@ Promise caches coalesce metadata lists, describes, and component retrievals by o
 
 ## Validation and limitations
 
-`npm test` compiles and runs Node unit/integration tests without launching VS Code. Tests cover manifests, paths, semantic XML parsing, minimal Permission Set merges, concurrency/cache races, and tree behavior. See [manual QA](docs/TEST_PLAN.md).
+`npm test` compiles and runs Node unit/integration tests without launching VS Code. Tests cover manifests, paths, semantic XML parsing, minimal Permission Set merges, concurrency/cache races, and tree behavior. `npm run test:host` runs opt-in live tests in a real VS Code extension host against `BOB_TEST_ORG`, using an automatically removed temporary SFDX project. See [validation instructions](docs/TEST_PLAN.md).
 
 - Live org availability, permissions, API versions, managed packages, and Metadata API list limits affect results. Listing has no pagination beyond the CLI response; very large types may be truncated upstream.
 - Profile/Permission Set XML can be incomplete because Salesforce filters permissions by retrieved metadata and access. This browser displays what the API returns; it never claims an omitted permission is false.
 - Layout, FlexiPage, application and Flow browsing exposes the semantic sections listed above, not every Salesforce XML feature. Remaining details are inspectable JSON. Screen nesting is bounded at 16 levels.
 - Search is scoped to the selected type/branch, not a global recursive index. There is no dependency analysis or deploy functionality.
 - XML parsing is synchronous per retrieved component. Very large individual XML files can briefly occupy the extension host; a worker parser remains future work. Caches last until refresh, org change, or session end.
-- CLI processes time out after ten minutes; there is no interactive cancellation. Windows arguments containing shell metacharacters are rejected rather than executed.
-- A supported desktop Node extension host and installed Salesforce CLI are required. Live Extension Development Host and authenticated-org QA must be completed before release.
+- CLI processes time out after ten minutes; there is no interactive cancellation. `cross-spawn` handles platform escaping, including percent-encoded layout names and literal shell punctuation. Embedded double quotes on Windows and control characters are rejected.
+- A supported desktop Node extension host and installed Salesforce CLI are required. Live checks cover the available developer-org metadata on Windows; empty metadata types and other desktop operating systems need additional environment coverage.
 
 ## License
 

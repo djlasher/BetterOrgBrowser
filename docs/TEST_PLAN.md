@@ -11,7 +11,20 @@ git diff --check
 
 Tests cover package ordering/escaping/persistence, hierarchy paths, member derivation, XML singleton/array/namespace/entity handling, semantic parsers, merge idempotence/CRLF/comments/key validation, caches/concurrency, provider parents, folder listing, bundle granularity, stale-org results and retryable failures.
 
-## Manual release matrix (not yet executed for this implementation)
+## Opt-in live extension-host suite
+
+On Windows PowerShell, with VS Code and Salesforce CLI installed:
+
+```powershell
+$env:BOB_TEST_ORG = 'your-test-org-alias'
+npm run test:host
+```
+
+The runner discovers `code.cmd` on Windows. On another platform, set `CODE_EXECUTABLE` to the actual VS Code desktop executable. Optional `BOB_TEST_API_VERSION` selects the temporary project's version (default 66.0); `BOB_TEST_REPORT` saves the JSON report outside the automatically removed test workspace.
+
+This test uses authenticated read-only Salesforce calls, not deployment. It creates a fresh SFDX project with a path containing spaces and an isolated VS Code profile; it retrieves a Flow and writes trimmed Permission Set files only there. It tests all registry roots, available semantic components, folder loading, manifest preview/current-selection retrieval, clipboard paths, actual dirty-editor sync, idempotence and refresh. Available Field/Object/Tab sections were exercised in the developer org; the remaining sections are covered with synthetic fixtures. The test needs a readable Account, Flow and Permission Set to exercise its core workflows. Empty types are explicitly reported as unavailable, not verified content.
+
+## Additional manual matrix
 
 Use F5 and open a separate SFDX sandbox project in the Extension Development Host. Keep a clean git baseline to review source changes. Repeat CLI-sensitive checks on Windows with a project path containing spaces and on another desktop OS.
 

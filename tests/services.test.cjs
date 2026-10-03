@@ -11,7 +11,7 @@ const vscode = {
     StatusBarAlignment:{Left:1},
     commands:{registerCommand:(id,callback)=>{handlers.set(id,callback);return {dispose(){}};}},
     workspace:{registerTextDocumentContentProvider:()=>({dispose(){}})},
-    window:{createOutputChannel:()=>({appendLine(){},show(){},dispose(){}}),
+    window:{showErrorMessage:()=>new Promise(()=>{}),createOutputChannel:()=>({appendLine(){},show(){},dispose(){}}),
         createTreeView:()=>({dispose(){}}),createStatusBarItem:()=>({show(){},dispose(){}})}
 };
 Module._load=function(name,...args) {
@@ -31,6 +31,13 @@ test('every contributed command is registered and menu references are valid',()=
     for(const items of Object.values(config.contributes.menus))for(const item of items)assert.ok(declared.has(item.command));
     assert.ok(config.contributes.menus['view/item/context'].find(m=>m.command.endsWith('addToManifest')).when.includes(':manifest'));
     for(const disposable of extension.subscriptions)disposable.dispose();
+});
+test('command errors return without waiting for notification dismissal',async()=>{
+    const result=await Promise.race([
+        handlers.get('betterOrgBrowser.copyApiName')().then(()=> 'returned'),
+        new Promise(resolve=>setTimeout(()=>resolve('blocked'),100))
+    ]);
+    assert.equal(result,'returned');
 });
 test('remote retrieval coalesces, matches exact component, and removes temporary files',async()=>{
     let calls=0, temp;

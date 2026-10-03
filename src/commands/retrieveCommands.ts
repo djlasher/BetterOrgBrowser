@@ -30,7 +30,7 @@ export function registerRetrieveCommands(context: CommandContext): void {
                     if (parsed.status !== 0 || parsed.result?.success === false || parsed.result?.done === false) {
                         throw new Error(`Retrieve did not complete successfully (${parsed.result?.status ?? 'unknown status'}). See retrieve result.`);
                     }
-                    await vscode.window.showInformationMessage('Retrieve complete.');
+                    void vscode.window.showInformationMessage('Retrieve complete.');
                 });
             } catch (error) { output.appendLine(String(error)); output.show(true); throw error; }
             finally { if (temp) { await fs.rm(temp, { recursive: true, force: true }); } }

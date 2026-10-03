@@ -14,7 +14,7 @@ import { registerRetrieveCommands } from './commands/retrieveCommands';
 import { registerMetadataCommands } from './commands/metadataCommands';
 import { registerPermissionSetCommands } from './commands/permissionSetCommands';
 
-export function activate(extension: vscode.ExtensionContext): void {
+export function activate(extension: vscode.ExtensionContext): { provider: MetadataProvider } {
     const cli = new OrgService();
     const service = new MetadataService(cli);
     const provider = new MetadataProvider(service);
@@ -40,4 +40,5 @@ export function activate(extension: vscode.ExtensionContext): void {
     registerMetadataCommands(context);
     registerPermissionSetCommands(context);
     update();
+    return { provider };
 }

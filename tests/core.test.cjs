@@ -10,6 +10,7 @@ const { parseFieldPermissions, parseObjectPermissions } = require('../out/salesf
 const { findXmlBlockByChildValue: find, mergeXmlBlockByChildValue: merge } = require('../out/salesforce/permissionSetMerge');
 const { SessionCache } = require('../out/cache/sessionCache');
 const { TaskQueue } = require('../out/cache/taskQueue');
+const { formatCliArgument } = require('../out/salesforce/cliArgument');
 const { buildRetrieveSummary } = require('../out/salesforce/retrieveResultFormatter');
 const wrap = value => `<PermissionSet xmlns="http://soap.sforce.com/2006/04/metadata">\n${value}\n</PermissionSet>\n`;
 const field = (name, readable='true') => `<fieldPermissions><editable>false</editable><field>${name}</field><readable>${readable}</readable></fieldPermissions>`;
@@ -136,4 +137,11 @@ test('CLI queue limits concurrent work and releases a slot after rejection', asy
     })));
     assert.equal(peak,2); assert.equal(results.filter(r=>r.status==='rejected').length,1);
     assert.equal(await queue.run(async()=>42),42);
+});
+test('CLI log formatting preserves encoded metadata names and rejects control characters',()=>{
+    assert.equal(formatCliArgument('Layout:Account-Account %28Marketing%29 Layout'),'"Layout:Account-Account %28Marketing%29 Layout"');
+    assert.equal(JSON.parse(formatCliArgument('Literal | < > ^ % ! characters')),'Literal | < > ^ % ! characters');
+    for(const value of ['line\nbreak','line\rbreak','nul\0byte']) {
+        assert.throws(()=>formatCliArgument(value),/not valid/);
+    }
 });

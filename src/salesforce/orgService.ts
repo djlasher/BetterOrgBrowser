@@ -1,6 +1,7 @@
-import { exec, execFile } from 'child_process';
+import spawn from 'cross-spawn';
 import * as vscode from 'vscode';
 import { TaskQueue } from '../cache/taskQueue';
+import { formatCliArgument } from './cliArgument';
 
 export interface SalesforceOrg {
     alias?: string;
@@ -194,41 +195,29 @@ export class OrgService {
         this.cliOutputChannel.appendLine(`[${new Date().toISOString()}] cwd: ${cwd ?? process.cwd()}`);
         this.cliOutputChannel.appendLine(`[${new Date().toISOString()}] command: ${commandText}`);
 
-        return this.queue.run(() => process.platform === 'win32'
-            ? this.runWindowsCommand(commandText, cwd)
-            : this.runFileCommand(executable, args, cwd));
+        return this.queue.run(() => this.runProcess(executable, args, cwd));
     }
 
-    private runWindowsCommand(commandText: string, cwd?: string): Promise<string> {
+    private runProcess(executable: string, args: string[], cwd?: string): Promise<string> {
         return new Promise((resolve, reject) => {
-            exec(commandText, { cwd, maxBuffer: 64 * 1024 * 1024, timeout: 10 * 60 * 1000 }, (error, stdout, stderr) => {
-                this.logCommandResult(stdout, stderr);
-
-                if (error) {
-                    this.logCommandError(error.message);
-                    reject(new Error(stderr || stdout || error.message));
-                    return;
+            const child = spawn(executable, args, { cwd, timeout: 10 * 60 * 1000, windowsHide: true });
+            let stdout = '', stderr = '', bytes = 0;
+            const collect = (chunk: string, error: boolean): void => {
+                bytes += Buffer.byteLength(chunk);
+                if (bytes > 64 * 1024 * 1024) {
+                    child.kill(); reject(new Error('Salesforce CLI output exceeded 64 MB.')); return;
                 }
-
-                this.logCommandSuccess();
-                resolve(stdout);
-            });
-        });
-    }
-
-    private runFileCommand(executable: string, args: string[], cwd?: string): Promise<string> {
-        return new Promise((resolve, reject) => {
-            execFile(executable, args, { cwd, maxBuffer: 64 * 1024 * 1024, timeout: 10 * 60 * 1000 }, (error, stdout, stderr) => {
+                if (error) { stderr += chunk; } else { stdout += chunk; }
+            };
+            child.stdout?.setEncoding('utf8').on('data', (chunk: string) => collect(chunk, false));
+            child.stderr?.setEncoding('utf8').on('data', (chunk: string) => collect(chunk, true));
+            child.once('error', error => { this.logCommandError(error.message); reject(error); });
+            child.once('close', (code, signal) => {
                 this.logCommandResult(stdout, stderr);
-
-                if (error) {
-                    this.logCommandError(error.message);
-                    reject(new Error(stderr || stdout || error.message));
-                    return;
-                }
-
-                this.logCommandSuccess();
-                resolve(stdout);
+                if (code !== 0) {
+                    const message = [stderr, stdout].filter(Boolean).join('\n') || `Salesforce CLI exited ${code ?? signal}`;
+                    this.logCommandError(message); reject(new Error(message));
+                } else { this.logCommandSuccess(); resolve(stdout); }
             });
         });
     }
@@ -257,12 +246,7 @@ export class OrgService {
     }
 
     private formatArg(arg: string): string {
-        // cmd.exe expands percent variables even inside quotes. Reject shell syntax
-        // instead of allowing org names or remote metadata to become executable code.
-        if (process.platform === 'win32' && /["%\r\n!^&|<>]/.test(arg)) {
-            throw new Error('Unsupported shell character in Salesforce CLI argument.');
-        }
-        return `"${arg}"`;
+        return formatCliArgument(arg);
     }
 
     private getSfExecutableName(): string {

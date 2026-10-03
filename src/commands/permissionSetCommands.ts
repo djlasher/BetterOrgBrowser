@@ -25,7 +25,7 @@ export function registerPermissionSetCommands(context: CommandContext): void {
             const merged = mergeXmlBlockByChildValue(local, remote, entry.section, entry.key, entry.name);
             if (merged !== local) { await writeTextFile(file, merged); }
         });
-        await vscode.window.showInformationMessage(`Synced ${entry.name} into ${name}.`);
+        void vscode.window.showInformationMessage(`Synced ${entry.name} into ${name}.`);
     };
     for (const command of ['syncPermissionSetEntry', 'syncFieldPermissionEntry', 'syncObjectPermissionEntry']) {
         register(context, command, node => {

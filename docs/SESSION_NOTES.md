@@ -14,7 +14,13 @@ Permission Set merging validates/parses XML and edits direct-child source spans,
 
 ## Validation status
 
-Dependency installation completed; TypeScript and automated tests passed during implementation. Tests exercise pure logic and a lightweight VS Code TreeItem/provider stub, not a running Extension Development Host. Live org retrieval and UI QA have not been performed. Salesforce CLI is installed on the development machine, but even a help invocation attempted to write outside the sandbox; no live org command was run.
+Dependency installation completed; TypeScript and automated tests passed during implementation. The follow-up adds an opt-in real Extension Development Host suite (`npm run test:host`) using an authenticated developer org and an isolated, automatically removed SFDX project. The earlier sandbox restriction was overcome with authorized execution; it was not an authentication blocker.
+
+Live testing uncovered two defects: awaited notification dismissal delayed retrieve/sync command completion, and Windows quoting rejected valid percent-encoded layout names. The launcher now passes an argument array through cross-spawn, with an actual Windows cmd-wrapper regression covering percent expansion and literal shell punctuation. The real host verified root listing, Flow source retrieval, editor-aware single-entry sync, component expansion and refresh; consult the QA report for final coverage. Aura/custom metadata records and several permission sections were absent in the test org, so their content coverage remains fixture-based.
+
+The final full live suite passed without errors. All 30 automated tests passed. The VSIX was built, installed into an isolated profile, and smoke-tested successfully (activation, commands, readonly preview; exit 0). See QA_RESULTS.md for exact coverage and limitations.
+
+VSIX packaging is supported with `vscode:prepublish` and `.vscodeignore`; tests, raw source and development caches are excluded. `activate()` exports the provider for integration checks. No production project or Salesforce metadata was deployed or modified.
 
 ## Resume / release checklist
 

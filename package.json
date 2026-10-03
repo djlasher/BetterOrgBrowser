@@ -4,6 +4,10 @@
   "description": "Granular Salesforce metadata explorer for VS Code.",
   "version": "0.0.1",
   "publisher": "djlasher",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/djlasher/BetterOrgBrowser.git"
+  },
   "engines": {
     "vscode": "^1.90.0"
   },
@@ -225,16 +229,20 @@
     }
   },
   "scripts": {
+    "vscode:prepublish": "npm run compile",
     "compile": "tsc -p ./",
     "watch": "tsc -watch -p ./",
-    "test": "npm run compile && node --test tests/*.test.cjs"
+    "test": "npm run compile && node --test tests/*.test.cjs",
+    "test:host": "npm run compile && node tests/run-host.cjs"
   },
   "devDependencies": {
+    "@types/cross-spawn": "^6.0.6",
     "@types/node": "^20.14.2",
     "@types/vscode": "^1.90.0",
     "typescript": "^5.5.2"
   },
   "dependencies": {
+    "cross-spawn": "^7.0.6",
     "fast-xml-parser": "^5.11.2"
   }
 }

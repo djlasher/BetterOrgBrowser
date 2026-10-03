@@ -13,7 +13,7 @@
 
 ## Release gate
 
-Run the manual Extension Development Host matrix in TEST_PLAN.md against authorized sandbox orgs on Windows and another desktop platform. Confirm actual Metadata API responses for all added roots, folder access, Custom Labels, Profile filtering, permission-entry sync, and CLI source conflict behavior. Automated tests are not a substitute for this gate.
+The opt-in `test:host` suite exercises a real Windows Extension Development Host and authenticated developer org using disposable local source. Continue coverage on another desktop platform and orgs with metadata absent from this developer org. Use TEST_PLAN.md for interactive QuickPick, cancellation, source-conflict and visual checks beyond the automated host suite.
 
 ## Next improvements
 
@@ -22,6 +22,6 @@ Run the manual Extension Development Host matrix in TEST_PLAN.md against authori
 - Better upstream list-limit diagnostics and cancellation of queued/running CLI requests.
 - Expanded Profile completeness guidance and folder edge cases (private and nested folders).
 - Optional scoped descendant search and visible manifest selection badges.
-- Extension-host automation and packaged VSIX smoke tests.
+- Extend the real-host automation to additional org shapes and desktop platforms.
 
 No deploy, backend, telemetry, custom OAuth or webview migration is planned for this work.

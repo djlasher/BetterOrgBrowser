@@ -1,0 +1,11 @@
+.git/**
+.vscode/**
+.vscode-test/**
+.npm-cache/**
+src/**
+tests/**
+tsconfig.json
+out/**/*.map
+docs/**
+**/*.vsix
+**/npm-debug.log*

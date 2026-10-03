@@ -14,6 +14,6 @@ export interface CommandContext {
 export function register(context: CommandContext, name: string, action: (node?: MetadataNode) => unknown): void {
     context.extension.subscriptions.push(vscode.commands.registerCommand(`betterOrgBrowser.${name}`, async (node?: MetadataNode) => {
         try { await action(node); }
-        catch (error) { await vscode.window.showErrorMessage(`Better Org Browser: ${error instanceof Error ? error.message : String(error)}`); }
+        catch (error) { void vscode.window.showErrorMessage(`Better Org Browser: ${error instanceof Error ? error.message : String(error)}`); }
     }));
 }
