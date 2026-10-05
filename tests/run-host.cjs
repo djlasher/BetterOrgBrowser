@@ -5,7 +5,8 @@ const os = require('node:os');
 const path = require('node:path');
 const { spawn, execFileSync } = require('node:child_process');
 async function main() {
-    if (!process.env.BOB_TEST_ORG) throw new Error('Set BOB_TEST_ORG to an authenticated test org alias.');
+    const offline=process.argv.includes('--offline');
+    if (!offline && !process.env.BOB_TEST_ORG) throw new Error('Set BOB_TEST_ORG to an authenticated test org alias.');
     let executable=process.env.CODE_EXECUTABLE;
     if(!executable && process.platform==='win32') {
         const cli=execFileSync('where.exe',['code.cmd'],{encoding:'utf8'}).trim().split(/\r?\n/)[0];
@@ -23,7 +24,7 @@ async function main() {
         await fs.writeFile(path.join(profile,'User','settings.json'),JSON.stringify({'update.mode':'none','extensions.autoUpdate':false,'git.enabled':false,'telemetry.telemetryLevel':'off'}));
         const env={...process.env,SF_DISABLE_LOG_FILE:'true',BOB_TEST_REPORT:report};
         delete env.ELECTRON_RUN_AS_NODE;
-        const child=spawn(executable,[`--extensionDevelopmentPath=${path.resolve(__dirname,'..')}`,`--extensionTestsPath=${path.join(__dirname,'host','index.cjs')}`,
+        const child=spawn(executable,[`--extensionDevelopmentPath=${path.resolve(__dirname,'..')}`,`--extensionTestsPath=${path.join(__dirname,'host',offline?'regressions.cjs':'index.cjs')}`,
             `--user-data-dir=${profile}`,`--extensions-dir=${path.join(temporary,'extensions')}`,'--disable-extensions','--disable-workspace-trust','--skip-welcome','--skip-release-notes','--new-window',project],
             {env,stdio:'inherit',windowsHide:true});
         const code=await new Promise((resolve,reject)=>{child.on('error',reject);child.on('exit',resolve);});

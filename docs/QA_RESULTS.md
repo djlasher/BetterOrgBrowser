@@ -1,5 +1,11 @@
 # Validation results
 
+## Version 0.0.2 follow-up
+
+All 36 automated tests passed. The isolated real-host regression suite passed (exit 0): moved field restored to alphabetical section order, leftover blank gaps removed, untargeted local values and an unsaved comment preserved, updated editor saved, and repeat sync idempotent. Welcome panel and empty-tree behavior were checked in the host; selection/status feedback, cancellation and restored-org behavior were checked in unit tests. Remote XML was fixture-supplied for this focused regression; it did not make live-org calls.
+
+## Original deep-browser validation
+
 Validated on Windows with an authenticated Salesforce Developer Edition org and the real VS Code Extension Development Host. Live test source was written only to disposable SFDX projects with spaces in their paths; no deployments or changes to existing user projects were performed.
 
 ## Passed

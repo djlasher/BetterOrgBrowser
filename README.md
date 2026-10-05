@@ -12,6 +12,8 @@ npm test
 
 Open this extension repository in VS Code and press F5. In the Extension Development Host, open a **separate Salesforce DX project**, then use **Better Org Browser: Select Salesforce Org**. Authenticate beforehand with Salesforce CLI (`sf org login web`). This repository is not an SFDX project.
 
+With no selected org, the browser shows a **Select Salesforce Org** welcome button. After selection, a notification confirms the choice; the selected org stays visible above the metadata tree and in a clickable status-bar indicator. Restored selections show the same persistent indicators after reload.
+
 ## Browsing
 
 Metadata is grouped by type in a native TreeView. Roots load on expansion, and component XML is retrieved only when a component is expanded. Right-click **Inspect Metadata** for details or a bundle file preview. **Copy Full Metadata Path** preserves semantic ancestors, for example:
@@ -51,6 +53,8 @@ Custom metadata type definitions (`__mdt`) appear under Custom Objects; their re
 - **Search Metadata** is a staged QuickPick: choose/filter a type, then a component or folder, then deeper children. Selection reveals the node. It does not crawl the entire org.
 
 Browsable does not imply independently retrievable. Flow screens, layout items, record values, indexes, permission entries, and bundle files cannot be added to the manifest here. Select their containing component instead. Describe fields remain inspectable; only custom fields or fields also returned in CustomObject metadata receive manifest actions.
+
+Syncing a Permission Set entry also regroups and alphabetically sorts its local section. Re-syncing a field moved to the bottom restores its position and removes leftover blank lines between top-level entries. Other entries keep their local values; comments and whitespace inside values remain intact.
 
 ## Architecture and caching
 

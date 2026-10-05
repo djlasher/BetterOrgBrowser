@@ -2,7 +2,7 @@
   "name": "better-org-browser",
   "displayName": "Better Org Browser",
   "description": "Granular Salesforce metadata explorer for VS Code.",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "publisher": "djlasher",
   "repository": {
     "type": "git",
@@ -19,6 +19,12 @@
   ],
   "main": "./out/extension.js",
   "contributes": {
+    "viewsWelcome": [
+      {
+        "view": "betterOrgBrowserView",
+        "contents": "Browse metadata from an authorized Salesforce org.\n[Select Salesforce Org](command:betterOrgBrowser.selectOrg)\nYour selected org will appear above the metadata tree and in the status bar."
+      }
+    ],
     "viewsContainers": {
       "activitybar": [
         {
@@ -233,7 +239,8 @@
     "compile": "tsc -p ./",
     "watch": "tsc -watch -p ./",
     "test": "npm run compile && node --test tests/*.test.cjs",
-    "test:host": "npm run compile && node tests/run-host.cjs"
+    "test:host": "npm run compile && node tests/run-host.cjs",
+    "test:host:regressions": "npm run compile && node tests/run-host.cjs --offline"
   },
   "devDependencies": {
     "@types/cross-spawn": "^6.0.6",
