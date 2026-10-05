@@ -5,20 +5,27 @@ import * as path from 'path';
 import { CommandContext, register } from './commandContext';
 import { projectRoot } from '../workspace/project';
 import { formatRetrieveResult } from '../salesforce/retrieveResultFormatter';
+import { PackageXmlBuilder } from '../packageXml/packageXmlBuilder';
 export function registerRetrieveCommands(context: CommandContext): void {
     const output = vscode.window.createOutputChannel('Better Org Browser Retrieve');
     context.extension.subscriptions.push(output);
-    for (const selected of [true, false]) {
-        register(context, selected ? 'retrieveSelectedMetadata' : 'retrieveManifest', async () => {
+    for (const mode of ['node', 'selected', 'manifest'] as const) {
+        register(context, mode === 'node' ? 'retrieveMetadata' : mode === 'selected' ? 'retrieveSelectedMetadata' : 'retrieveManifest', async node => {
             const org = context.provider.selectedOrgTarget;
             if (!org) { throw new Error('Select a Salesforce org first.'); }
-            if (selected && !context.manifest.getCount()) { throw new Error('Add metadata to manifest selections first.'); }
+            let selections = context.manifest;
+            if (mode === 'node') {
+                if (!node?.data.manifest || node.org !== org) { throw new Error('Select a retrievable metadata component from the current org.'); }
+                selections = new PackageXmlBuilder();
+                selections.add(node.data.manifest.type, node.data.manifest.member);
+            }
+            if (mode === 'selected' && !selections.getCount()) { throw new Error('Add metadata to manifest selections first.'); }
             const root = await projectRoot();
-            const xml = context.manifest.build();
+            const xml = selections.build();
             let temp: string | undefined;
             try {
                 let manifest = path.join(root.fsPath, 'manifest', 'package.xml');
-                if (selected) {
+                if (mode !== 'manifest') {
                     temp = await fs.mkdtemp(path.join(os.tmpdir(), 'better-org-manifest-'));
                     manifest = path.join(temp, 'package.xml'); await fs.writeFile(manifest, xml, 'utf8');
                 } else { await vscode.workspace.fs.stat(vscode.Uri.file(manifest)); }
