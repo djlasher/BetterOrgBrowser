@@ -2,7 +2,7 @@
   "name": "better-org-browser",
   "displayName": "Better Org Browser",
   "description": "Granular Salesforce metadata explorer for VS Code.",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "publisher": "djlasher",
   "repository": {
     "type": "git",
@@ -43,6 +43,11 @@
       ]
     },
     "commands": [
+      {
+        "command": "betterOrgBrowser.retrieveMetadata",
+        "title": "Better Org Browser: Retrieve Metadata",
+        "icon": "$(cloud-download)"
+      },
       {
         "command": "betterOrgBrowser.refresh",
         "title": "Better Org Browser: Refresh",
@@ -127,6 +132,11 @@
     "menus": {
       "view/item/context": [
         {
+          "command": "betterOrgBrowser.retrieveMetadata",
+          "when": "view == betterOrgBrowserView && viewItem =~ /:manifest/",
+          "group": "inline@2"
+        },
+        {
           "command": "betterOrgBrowser.syncPermissionSetEntry",
           "when": "view == betterOrgBrowserView && viewItem =~ /:sync/",
           "group": "inline@1"
@@ -195,6 +205,10 @@
         }
       ],
       "commandPalette": [
+        {
+          "command": "betterOrgBrowser.retrieveMetadata",
+          "when": "false"
+        },
         {
           "command": "betterOrgBrowser.syncFieldPermissionEntry",
           "when": "false"

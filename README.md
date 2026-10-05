@@ -47,6 +47,7 @@ Custom metadata type definitions (`__mdt`) appear under Custom Objects; their re
 ## Select, retrieve, and sync
 
 - **Add / Remove from Manifest**, **Clear / Show Manifest Selections**, **Preview Manifest**, **Write Manifest to File**, and the persisted status bar count remain available.
+- **Retrieve Metadata** is the inline cloud-download button on each independently retrievable component, including whole objects, individual custom fields, object child metadata, labels, bundles, and metadata folders. It retrieves only the clicked member into your SFDX project without changing manifest selections. Informational rows remain inspect-only.
 - **Retrieve Selected Metadata** uses the current selections through a temporary manifest and retrieves into the selected SFDX project using normal CLI source behavior. It does not replace `manifest/package.xml`.
 - **Retrieve Manifest** retrieves the existing project manifest. Retrieval summaries and detailed CLI output remain available.
 - **Sync Permission Set Entry** appears inline on supported permission entries. Field/Object sync command IDs remain registered for compatibility. The full remote Permission Set is cached outside the source tree; only the chosen entry is merged into an existing local Permission Set. Package directories come from `sfdx-project.json`; multiple matching files prompt for a target. Open documents are edited and saved through VS Code.

@@ -50,7 +50,8 @@ export class MetadataProvider implements vscode.TreeDataProvider<MetadataNode>, 
         if (def.folderType && !folder) {
             const folders = await this.service.list(org, def.folderType);
             return folders.map(item => {
-                const node = new MetadataNode({ label: item.fullName, name: item.fullName, kind: 'Folder' }, parent);
+                const node = new MetadataNode({ label: item.fullName, name: item.fullName, kind: 'Folder',
+                    manifest: { type: def.folderType!, member: item.fullName } }, parent);
                 return node.expandable(() => this.list(node, def, org, item.fullName));
             });
         }
