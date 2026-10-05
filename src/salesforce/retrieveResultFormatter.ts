@@ -93,7 +93,7 @@ export function buildRetrieveSummary(parsed: RetrieveJsonResult): RetrieveSummar
 
     return {
         status: result?.status ?? parsed.name ?? String(parsed.status ?? 'Unknown'),
-        success: result?.success === true || parsed.status === 0,
+        success: result?.success ?? (parsed.status === 0 && result?.done !== false),
         done: result?.done === true,
         deployedSourceCount: deployedSource.length,
         retrievedFileCount: retrievedFiles.length,

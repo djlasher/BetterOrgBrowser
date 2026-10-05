@@ -1,62 +1,19 @@
-# BetterOrgBrowser Architecture
+# Architecture
 
-High-level architecture notes for the BetterOrgBrowser VS Code extension.
+- `extension.ts`: constructs and disposes services, view, status bar and command modules.
+- `commands/`: org selection, manifests, retrieval, search/details/copy, granular permission sync.
+- `metadata/metadataRegistry.ts`: types, labels, icons, folder/singleton behavior and parser dispatch.
+- `metadata/metadataModel.ts`: VS Code-independent semantic nodes, manifest references, sync keys, hierarchy paths.
+- `metadata/metadataNode.ts`: VS Code TreeItem capabilities, icons, descriptions and parents.
+- `metadata/metadataProvider.ts`: lazy loading, progress, error rows and stale-org result suppression.
+- `metadata/parsers/`: explicit semantic adapters over validated fast-xml-parser output. No arbitrary XML recursion.
+- `salesforce/orgService.ts`: centralized Salesforce CLI execution and output logging.
+- `salesforce/metadataService.ts`: cached lists/describes/remote files; temporary-directory lifecycle.
+- `salesforce/permissionSetMerge.ts`: validated source-span single-entry merge. The scanner only locates edit ranges; the XML parser interprets content.
+- `cache/`: promise coalescing/invalidation and CLI concurrency queue.
+- `workspace/`: project/package discovery, readonly previews, editor-aware file reads/writes.
+- `packageXml/`: deterministic manifest builder and persistent selections.
 
-## Overview
+Metadata browse and sync reads never use source-format retrieval into the project. Only explicit retrieve commands invoke normal project source retrieval. Semantic nodes without a real independent Metadata API member do not advertise manifest actions. Permission Set entries have sync keys rather than fabricated package types.
 
-BetterOrgBrowser is a local VS Code extension for browsing Salesforce metadata, selecting exact components, generating package.xml, and retrieving metadata into an SFDX project.
-
-## Current Flow
-
-```text
-VS Code Extension
--> Metadata Tree Provider
--> Org Service
--> Salesforce CLI
--> Salesforce Org
-```
-
-## Core Components
-
-### Extension Entry Point
-
-`src/extension.ts`
-
-Handles activation, command registration, and tree view registration.
-
-### Metadata Provider
-
-`src/metadata/metadataProvider.ts`
-
-Builds the metadata tree and lazy-loads metadata categories and child nodes.
-
-### Metadata Node
-
-`src/metadata/metadataNode.ts`
-
-Represents tree nodes and stores metadata context used by commands and menus.
-
-### Org Service
-
-`src/salesforce/orgService.ts`
-
-Wraps Salesforce CLI calls for org selection, metadata listing, object describe, and retrieval.
-
-### Package XML Builder
-
-`src/packageXml/packageXmlBuilder.ts`
-
-Tracks selected metadata and generates package.xml output.
-
-## Current State
-
-The extension has proven the loop from live org browsing to package.xml generation to retrieval.
-
-## Future Architecture Areas
-
-- Manifest selection persistence
-- Output channel logging
-- Metadata caching
-- Permission set XML parsing
-- Dependency analysis
-- Large org performance improvements
+Unit tests import pure modules directly. Tree tests provide a small VS Code surface stub. Real CLI and extension-host behavior requires manual QA.
