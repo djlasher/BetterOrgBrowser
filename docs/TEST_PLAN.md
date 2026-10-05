@@ -13,6 +13,8 @@ Tests cover package ordering/escaping/persistence, hierarchy paths, member deriv
 
 ## Opt-in live extension-host suite
 
+For the org feedback and Permission Set ordering regressions, run `npm run test:host:regressions`. This uses a real isolated VS Code host and disposable project, with remote XML supplied by a fixture. It needs no Salesforce login. Unit coverage also checks org selection, cancellation, restoration, notification behavior, sorting and LF/CRLF preservation.
+
 On Windows PowerShell, with VS Code and Salesforce CLI installed:
 
 ```powershell

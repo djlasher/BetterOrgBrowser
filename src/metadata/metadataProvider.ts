@@ -19,10 +19,11 @@ export class MetadataProvider implements vscode.TreeDataProvider<MetadataNode>, 
     getParent(node: MetadataNode): MetadataNode | undefined { return node.parent; }
     async getChildren(node?: MetadataNode): Promise<MetadataNode[]> {
         if (!node) {
-            if (!this.selectedOrgTarget) { return [new MetadataNode({ label: 'Select a Salesforce org to browse', kind: 'Info' })]; }
+            // An empty tree lets VS Code render the welcome panel and its button.
+            if (!this.selectedOrgTarget) { return []; }
             if (!this.roots.length) {
                 const org = this.selectedOrgTarget;
-                this.roots = metadataRegistry.map(def => {
+                this.roots = [...metadataRegistry].sort((a, b) => a.label.localeCompare(b.label)).map(def => {
                     const root = new MetadataNode({ label: def.label, kind: 'root' });
                     root.definition = def; root.org = org; root.iconPath = new vscode.ThemeIcon(def.icon);
                     return root.expandable(() => this.list(root, def, org));

@@ -32,7 +32,19 @@ export function activate(extension: vscode.ExtensionContext): { provider: Metada
     } };
     const saved = loadSelectedOrg(extension);
     if (saved) { provider.setSelectedOrg(saved.label, saved.target); tree.description = saved.label; }
-    extension.subscriptions.push(cli, service, provider, tree, status, previews,
+    const orgStatus = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 101);
+    orgStatus.command = 'betterOrgBrowser.selectOrg';
+    const updateOrgFeedback = (): void => {
+        const label = provider.selectedOrgName;
+        tree.description = label;
+        tree.message = label ? `Selected org: ${label}` : undefined;
+        orgStatus.text = label ? `$(database) Org: ${provider.selectedOrgTarget}` : '$(plug) Select Salesforce Org';
+        orgStatus.tooltip = label ? `Selected Salesforce org: ${label}\nClick to change org` : 'Select a Salesforce org for Better Org Browser';
+        orgStatus.show();
+    };
+    updateOrgFeedback();
+    extension.subscriptions.push(cli, service, provider, tree, status, orgStatus, previews,
+        provider.onDidChangeTreeData(updateOrgFeedback),
         vscode.workspace.registerTextDocumentContentProvider('better-org-browser', previews));
     registerOrgCommands(context);
     registerManifestCommands(context);

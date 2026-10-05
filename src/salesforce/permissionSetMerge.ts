@@ -41,19 +41,51 @@ export function mergeXmlBlockByChildValue(local: string, remote: string, section
     let block = new XMLBuilder({ format: true, indentBy: '    ' }).build({ [section]: parsed[section] }).trim() as string;
     if (layout.prefix) { block = block.replace(/<(\/?)([\w.-]+)/g, `<$1${layout.prefix}$2`); }
     block = block.replace(/\n/g, `${eol}    `);
-    const matches = layout.entries.filter(entry => entry.tag === section && value(entry.xml, section, key) === name);
-    if (matches.length > 1) { throw new Error('Local Permission Set contains duplicate entry keys; resolve duplicates before syncing.'); }
-    if (matches.length) {
-        const existing = matches[0];
-        return local.slice(0, existing.start) + block + local.slice(existing.end);
-    }
     const same = layout.entries.filter(entry => entry.tag === section);
-    const next = same.find(entry => value(entry.xml, section, key).localeCompare(name) > 0)
-        ?? layout.entries.find(entry => entry.tag.localeCompare(section) > 0 && !['label', 'description', 'hasActivationRequired', 'license'].includes(entry.tag));
-    if (next) { return local.slice(0, next.start) + block + eol + '    ' + local.slice(next.start); }
-    if (same.length) {
-        const end = same[same.length - 1].end;
-        return local.slice(0, end) + eol + '    ' + block + local.slice(end);
+    const keyed = same.map(entry => ({ name: value(entry.xml, section, key), block: entry.xml }));
+    if (new Set(keyed.map(entry => entry.name)).size !== keyed.length) {
+        throw new Error('Local Permission Set contains duplicate entry keys; resolve duplicates before syncing.');
     }
-    return local.slice(0, layout.close) + '    ' + block + eol + local.slice(layout.close);
+    if (keyed.some(entry => !entry.name)) { throw new Error(`Local ${section} entry is missing its ${key}.`); }
+    const sorted = [...keyed.filter(entry => entry.name !== name), { name, block }]
+        .sort((a, b) => a.name.localeCompare(b.name));
+    const next = layout.entries.find(entry => entry.tag !== section && entry.tag.localeCompare(section) > 0
+        && !['label', 'description', 'hasActivationRequired', 'license'].includes(entry.tag));
+    // Keep the original section location unless an entry was moved below a later
+    // section. Regroup every local entry; only the selected entry gets remote data.
+    const anchor = Math.min(same[0]?.start ?? layout.close, next?.start ?? layout.close);
+    const removals = same.map(entry => {
+        let start = entry.start;
+        while (start > 0 && /\s/.test(local[start - 1])) { start--; }
+        return { start, end: entry.end };
+    });
+    let remaining = '', cursor = 0, insertion = anchor;
+    for (const removal of removals) {
+        remaining += local.slice(cursor, removal.start);
+        insertion -= Math.max(0, Math.min(anchor, removal.end) - removal.start);
+        cursor = removal.end;
+    }
+    remaining += local.slice(cursor);
+    const before = remaining.slice(0, insertion).replace(/\s*$/, '');
+    const after = remaining.slice(insertion).replace(/^\s*/, '');
+    const closeTag = after.startsWith(`</${layout.prefix}PermissionSet`);
+    const result = before + eol + '    ' + sorted.map(entry => entry.block).join(eol + '    ')
+        + eol + (closeTag ? '' : '    ') + after;
+    return compactTopLevelGaps(result, eol);
+}
+
+/** Remove leftover blank lines between entries, never whitespace inside XML
+ * values/CDATA or comments. Preserve other sections' blocks verbatim. */
+function compactTopLevelGaps(xml: string, eol: string): string {
+    const layout = spans(xml);
+    let result = xml;
+    for (let i = layout.entries.length - 1; i >= 0; i--) {
+        const start = layout.entries[i].end;
+        const end = layout.entries[i + 1]?.start ?? layout.close;
+        const gap = xml.slice(start, end);
+        if (/^\s*$/.test(gap) && /\n[ \t\r]*\n/.test(gap)) {
+            result = result.slice(0, start) + eol + (i + 1 < layout.entries.length ? '    ' : '') + result.slice(end);
+        }
+    }
+    return result;
 }

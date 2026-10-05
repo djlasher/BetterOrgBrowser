@@ -10,7 +10,13 @@ See README.md for the exact type/section coverage and limitations. `src/extensio
 
 `MetadataService` caches list/describe/retrieve promises. Temporary retrieves are outside the user project and cleaned after their files have been read. Refresh and org changes clear caches; in-flight prior-org tree results are discarded. `OrgService` centralizes CLI invocation and limits concurrency to three processes.
 
-Permission Set merging validates/parses XML and edits direct-child source spans, preserving unrelated blocks/comments and the local newline convention. Selected entries use stable formatting and sorted insertion; existing unrelated blocks are not globally reordered. Duplicate local keys are rejected. Multiple sync actions are serialized; local editor text is read after network work. Existing local files are located in configured package directories.
+Permission Set merging validates/parses XML and edits direct-child source spans, preserving unrelated block contents/comments and the local newline convention. Sync replaces the selected entry, regroups and sorts all local entries in that section, and removes leftover whitespace-only blank lines between top-level entries. Other entries retain local values; duplicate local keys are rejected. Multiple sync actions are serialized; local editor text is read after network work. Existing local files are located in configured package directories.
+
+## Version 0.0.2 spot-check fixes
+
+- Native Select Salesforce Org welcome button, persistent selected-org tree message and clickable status indicator, and immediate selection confirmation.
+- Re-sync repairs a field moved below other sections, even when its remote values are unchanged; gaps left by moving entries are cleaned.
+- 36 automated tests passed. `npm run test:host:regressions` passed in a real isolated VS Code host with a dirty editor, testing ordering, whitespace, preserved local values/comments, saved file contents and idempotence. This focused suite replaces only the remote network boundary and requires no org connection.
 
 ## Validation status
 

@@ -13,5 +13,6 @@ export function registerOrgCommands(context: CommandContext): void {
         const target = cli.getOrgTargetName(pick.org);
         await saveSelectedOrg(context.extension, { label: pick.label, target });
         provider.setSelectedOrg(pick.label, target); context.tree.description = pick.label;
+        void vscode.window.showInformationMessage(`Salesforce org selected: ${pick.label}`);
     });
 }
