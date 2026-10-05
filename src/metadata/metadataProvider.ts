@@ -23,7 +23,7 @@ export class MetadataProvider implements vscode.TreeDataProvider<MetadataNode>, 
             if (!this.selectedOrgTarget) { return []; }
             if (!this.roots.length) {
                 const org = this.selectedOrgTarget;
-                this.roots = metadataRegistry.map(def => {
+                this.roots = [...metadataRegistry].sort((a, b) => a.label.localeCompare(b.label)).map(def => {
                     const root = new MetadataNode({ label: def.label, kind: 'root' });
                     root.definition = def; root.org = org; root.iconPath = new vscode.ThemeIcon(def.icon);
                     return root.expandable(() => this.list(root, def, org));

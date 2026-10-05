@@ -16,7 +16,7 @@ With no selected org, the browser shows a **Select Salesforce Org** welcome butt
 
 ## Browsing
 
-Metadata is grouped by type in a native TreeView. Roots load on expansion, and component XML is retrieved only when a component is expanded. Right-click **Inspect Metadata** for details or a bundle file preview. **Copy Full Metadata Path** preserves semantic ancestors, for example:
+Metadata is grouped by type in a native TreeView, with top-level categories alphabetized by their displayed names. Roots load on expansion, and component XML is retrieved only when a component is expanded. Right-click **Inspect Metadata** for details or a bundle file preview. **Copy Full Metadata Path** preserves semantic ancestors, for example:
 
 ```text
 CustomObject: Account > ValidationRule: Require_Industry
