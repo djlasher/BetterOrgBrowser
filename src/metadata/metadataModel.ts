@@ -14,7 +14,11 @@ export interface SemanticNode {
     children?: SemanticNode[];
     manifest?: PackageXmlMember;
     sync?: PermissionEntry;
+    fragment?: XmlSelector[];
+    objectField?: { object: string; field: string };
+    sourceFile?: string;
 }
+export interface XmlSelector { tag: string; key?: string; name?: string; index?: number }
 export interface PathNode {
     label: string;
     kind: string;

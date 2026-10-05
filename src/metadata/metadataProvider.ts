@@ -63,20 +63,30 @@ export class MetadataProvider implements vscode.TreeDataProvider<MetadataNode>, 
             node.definition = def; node.iconPath = new vscode.ThemeIcon(def.icon);
             if (def.type === 'CustomObject') {
                 node.expandable(async () => {
-                    const metadataFields = new Set<string>();
+                    const metadataFields = new Map<string, import('./metadataModel').SemanticNode>();
                     const fields = new MetadataNode({ label: 'Fields', kind: 'section' }, node);
-                    fields.expandable(async () => (await this.service.describe(org, item.fullName)).map(field => {
+                    fields.expandable(async () => {
+                        let described: import('../salesforce/orgService').SObjectField[];
+                        try { described = await this.service.describe(org, item.fullName); }
+                        catch (error) { if (!metadataFields.size) { throw error; } described = []; }
+                        const byName = new Map(described.map(field => [field.name, field]));
+                        for (const [name, data] of metadataFields) {
+                            if (!byName.has(name)) { byName.set(name, { name, type: data.description ?? '' } as import('../salesforce/orgService').SObjectField); }
+                        }
+                        return [...byName.values()].sort((a, b) => a.name.localeCompare(b.name)).map(field => {
                         const child = new MetadataNode({ label: field.name, name: field.name, kind: 'CustomField', description: field.type,
                             manifest: field.custom || field.name.endsWith('__c') || metadataFields.has(field.name)
                                 ? { type: 'CustomField', member: `${item.fullName}.${field.name}` } : undefined,
+                            objectField: { object: item.fullName, field: field.name },
                             details: { ...field } }, fields);
                         child.fieldDetails = field; child.contextValue += ':field'; return child;
-                    }));
+                        });
+                    });
                     // The describe-backed Fields folder remains available if metadata retrieval fails.
                     try {
                         const parsed = def.parse!(await this.service.xml(org, def, item.fullName), item.fullName);
                         for (const field of parsed.find(section => section.label === 'Fields')?.children ?? []) {
-                            if (field.name) { metadataFields.add(field.name); }
+                            if (field.name) { metadataFields.set(field.name, field); }
                         }
                         const sections = parsed.filter(section => section.label !== 'Fields');
                         return [fields, ...sections.map(data => new MetadataNode(data, node))];
@@ -90,7 +100,9 @@ export class MetadataProvider implements vscode.TreeDataProvider<MetadataNode>, 
                 node.expandable(async () => (await this.service.remoteFiles(org, def.type, item.fullName))
                     .filter(file => file.path.includes(`/${def.bundle}/${item.fullName}/`) || file.path.startsWith(`${def.bundle}/${item.fullName}/`))
                     .map(file => {
-                        const child = new MetadataNode({ label: file.path.split(`/${item.fullName}/`).pop()!, kind: 'BundleFile', name: file.path.split(`/${item.fullName}/`).pop() }, node);
+                        const relative = file.path.split(`/${item.fullName}/`).pop()!;
+                        const child = new MetadataNode({ label: relative, kind: 'BundleFile', name: relative,
+                            sourceFile: `${def.bundle}/${item.fullName}/${relative}` }, node);
                         child.remoteContent = file.content; return child;
                     }));
             }

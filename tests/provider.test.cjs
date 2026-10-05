@@ -80,3 +80,12 @@ test('Custom Labels retrieve the aggregate and produce valid child members',asyn
     const label=(await provider.getChildren(await root(provider,'CustomLabels')))[0];
     assert.deepEqual(label.data.manifest,{type:'CustomLabel',member:'Greeting'});
 });
+test('metadata-only fields survive describe failure and standard fields retain download actions',async()=>{
+    const provider=new MetadataProvider(service({describe:async()=>{throw new Error('describe unavailable');}}));
+    provider.setSelectedOrg('Test','test');
+    const account=(await provider.getChildren(await root(provider,'CustomObject')))[0];
+    const fields=(await provider.getChildren(account)).find(node=>node.label==='Fields');
+    const children=await provider.getChildren(fields);
+    assert.equal(children[0].name,'Name');assert.match(children[0].contextValue,/:download/);
+    assert.deepEqual(children[0].data.objectField,{object:'Account',field:'Name'});
+});
