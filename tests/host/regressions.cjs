@@ -68,18 +68,12 @@ exports.run=async()=>{
         const flow=(await provider.getChildren(flows))[0];
         const screens=(await provider.getChildren(flow)).find(node=>node.label==='Screens');
         const selectedField=screens.children[0].children[0].children[0];
-        assert.match(selectedField.contextValue,/:download/);
-        const flowDir=vscode.Uri.joinPath(project,'force-app','main','default','flows');
-        await vscode.workspace.fs.createDirectory(flowDir);
-        const flowUri=vscode.Uri.joinPath(flowDir,'RegressionFlow.flow-meta.xml');
-        await vscode.workspace.fs.writeFile(flowUri,Buffer.from('<Flow><screens><name>Main</name><fields><name>A</name><fieldText>old</fieldText></fields><fields><name>B</name><fieldText>local sibling</fieldText></fields></screens></Flow>'));
-        const flowDoc=await vscode.workspace.openTextDocument(flowUri);await vscode.window.showTextDocument(flowDoc);
-        const flowEdit=new vscode.WorkspaceEdit();flowEdit.insert(flowUri,new vscode.Position(0,6),'<!-- unsaved flow comment -->');
-        assert.ok(await vscode.workspace.applyEdit(flowEdit));
-        await vscode.commands.executeCommand('betterOrgBrowser.retrieveChildMetadata',selectedField);
-        assert.match(flowDoc.getText(),/unsaved flow comment/);assert.match(flowDoc.getText(),/local sibling/);
-        assert.match(flowDoc.getText(),/<fieldText>remote<\/fieldText>/);assert.equal(flowDoc.isDirty,false);
-        report.checks.push({name:'Nested Flow child download updates only selected entry and preserves unsaved comment and local sibling',status:'passed'});
+        assert.doesNotMatch(selectedField.contextValue,/:download/);
+        assert.equal(selectedField.canRetrieveChild,false);
+        assert.match(flow.contextValue,/:manifest/);
+        assert.equal(flow.data.manifest.type,'Flow');
+        assert.equal(selectedField.name,'A');
+        report.checks.push({name:'Flow descendants remain visible and inspectable; only the complete Flow has a retrieve action',status:'passed'});
     }catch(error){report.errors.push({error:String(error),stack:error.stack});}
     await fs.writeFile(process.env.BOB_TEST_REPORT,JSON.stringify(report,null,2));
     if(report.errors.length)throw new Error('Offline host regression failed');

@@ -7,8 +7,10 @@ const handlers = new Map(), errors = [], notices = [];
 const vscode = {
     commands: { registerCommand(name, fn) { handlers.set(name, fn); return { dispose() {} }; } },
     ProgressLocation: { Notification: 15 },
+    StatusBarAlignment: { Left: 1 },
     window: {
         createOutputChannel: () => ({ appendLine() {}, show() {}, dispose() {} }),
+        createStatusBarItem: () => ({ show() {}, dispose() {} }),
         withProgress: async (_, fn) => fn(),
         showInformationMessage: message => notices.push(message),
         showErrorMessage: message => errors.push(message)
@@ -27,7 +29,7 @@ test('inline retrieve targets only the clicked metadata and preserves selections
     const manifest = new PackageXmlBuilder(); manifest.add('ApexClass', 'KeepSelected');
     const calls = [];
     let fail = false;
-    registerRetrieveCommands({ extension: { subscriptions: [] }, manifest,
+    registerRetrieveCommands({ extension: { subscriptions: [] }, manifest, tree: {},
         provider: { selectedOrgTarget: 'QA', service: { cli: { retrieveManifest: async (org, file, root) => {
             calls.push({ org, file, root, xml: await fs.readFile(file, 'utf8') });
             if (fail) throw new Error('fixture failure');
