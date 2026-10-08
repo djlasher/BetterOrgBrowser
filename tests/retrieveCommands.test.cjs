@@ -60,6 +60,6 @@ test('inline download is contributed for manifest-capable nodes alongside existi
     const menus = require('../package.json').contributes.menus['view/item/context'];
     const retrieve = menus.find(item => item.command === 'betterOrgBrowser.retrieveMetadata');
     assert.match(retrieve.group, /^inline/);
-    assert.equal(retrieve.when, 'view == betterOrgBrowserView && viewItem =~ /:manifest/');
+    assert.equal(retrieve.when, 'view == betterOrgBrowserView && viewItem =~ /:manifest/ && !(viewItem =~ /:download/)');
     assert.ok(menus.some(item => item.command === 'betterOrgBrowser.syncPermissionSetEntry' && item.group.startsWith('inline')));
 });

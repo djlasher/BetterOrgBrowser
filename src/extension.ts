@@ -13,6 +13,7 @@ import { registerManifestCommands, selectionText } from './commands/manifestComm
 import { registerRetrieveCommands } from './commands/retrieveCommands';
 import { registerMetadataCommands } from './commands/metadataCommands';
 import { registerPermissionSetCommands } from './commands/permissionSetCommands';
+import { registerChildRetrieveCommands } from './commands/childRetrieveCommands';
 
 export function activate(extension: vscode.ExtensionContext): { provider: MetadataProvider } {
     const cli = new OrgService();
@@ -30,6 +31,7 @@ export function activate(extension: vscode.ExtensionContext): { provider: Metada
         await saveManifestSelections(extension, manifest.getSelections()); update();
         previews.update('selections.md', selectionText(context)); previews.update('package.xml', manifest.build());
     } };
+    registerChildRetrieveCommands(context);
     const saved = loadSelectedOrg(extension);
     if (saved) { provider.setSelectedOrg(saved.label, saved.target); tree.description = saved.label; }
     const orgStatus = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 101);

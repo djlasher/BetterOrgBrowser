@@ -23,6 +23,7 @@ export function parsePermissionSet(xml: string, root = 'PermissionSet'): Semanti
         const entries = array(data[section]).map(object).filter(entry => text(entry[key])).map(entry => ({
             label: text(entry[key]), name: text(entry[key]), kind, details: entry,
             sync: root === 'PermissionSet' ? { section, key, name: text(entry[key]) } : undefined,
+            fragment: root === 'Profile' ? [{ tag: section, key, name: text(entry[key]) }] : undefined,
             children: Object.entries(entry).filter(([k, v]) => k !== key && typeof v !== 'object').map(([k, v]) => ({
                 label: humanize(k), kind: 'Value', description: text(v) === 'true' ? 'Yes' : text(v) === 'false' ? 'No' : text(v),
                 details: { [k]: v }

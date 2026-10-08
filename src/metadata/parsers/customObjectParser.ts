@@ -14,13 +14,14 @@ export function parseCustomObject(xml: string, objectName: string): SemanticNode
             label: text(e.label) || text(e.fullName), name: text(e.fullName), kind, details: e,
             description: text(e.type) || undefined,
             // Index is browse-only: its availability as an independent member varies.
-            manifest: kind === 'Index' ? undefined : objectMember(kind, objectName, text(e.fullName))
+            manifest: kind === 'Index' ? undefined : objectMember(kind, objectName, text(e.fullName)),
+            fragment: kind === 'Index' ? [{ tag: key, key: 'fullName', name: text(e.fullName) }] : undefined
         })).sort((a, b) => a.name.localeCompare(b.name));
         return children.length ? [{ label, kind: 'section', children }] : [];
     });
     if (data.searchLayouts !== undefined) {
         const details = object(data.searchLayouts);
-        sections.push({ label: 'Search Layouts', kind: 'SearchLayouts', details });
+        sections.push({ label: 'Search Layouts', kind: 'SearchLayouts', details, fragment: [{ tag: 'searchLayouts' }] });
     }
     return sections;
 }

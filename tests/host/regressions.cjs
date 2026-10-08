@@ -41,6 +41,45 @@ exports.run=async()=>{
         assert.equal(document.getText(),result);
         report.checks.push({name:'Moved field resync: sorted section, blank gap cleanup, local value preservation, dirty-editor save, idempotence',status:'passed'});
         report.checks.push({name:'Welcome contribution and empty initial tree',status:'passed'});
+        provider.refresh();
+        provider.service.list=async()=>[{fullName:'Case'}];
+        provider.service.describe=async()=>[{name:'Industry',type:'picklist'},{name:'High_Risk_Reason__c',type:'string',custom:true}];
+        const objectXml='<CustomObject><label>Do not download whole object</label><fields><fullName>Industry</fullName><label>Industry</label><type>Picklist</type></fields><fields><fullName>Metadata_Only__c</fullName><label>Only XML</label><type>Text</type><length>80</length></fields><fields><fullName>High_Risk_Reason__c</fullName><label>Risk</label><type>Text</type><length>80</length></fields></CustomObject>';
+        provider.service.xml=async()=>objectXml;
+        const objects=(await provider.getChildren()).find(node=>node.definition?.type==='CustomObject');
+        const objectNode=(await provider.getChildren(objects))[0];
+        const fields=(await provider.getChildren(objectNode)).find(node=>node.label==='Fields');
+        const children=await provider.getChildren(fields);
+        assert.deepEqual(children.map(node=>node.name),['High_Risk_Reason__c','Industry','Metadata_Only__c']);
+        for(const name of ['Industry','High_Risk_Reason__c','Metadata_Only__c']){
+            const child=children.find(node=>node.name===name);
+            assert.match(child.contextValue,/:download/);
+            await vscode.commands.executeCommand('betterOrgBrowser.retrieveChildMetadata',child);
+            const result=Buffer.from(await vscode.workspace.fs.readFile(vscode.Uri.joinPath(project,'force-app','main','default','objects','Case','fields',`${name}.field-meta.xml`))).toString('utf8');
+            assert.match(result,/<CustomField xmlns=/);assert.ok(result.includes(`<fullName>${name}</fullName>`));
+            assert.equal((result.match(/<fullName>/g)||[]).length,1);assert.doesNotMatch(result,/Do not download whole object/);
+        }
+        await assert.rejects(vscode.workspace.fs.stat(vscode.Uri.joinPath(project,'force-app','main','default','objects','Case','Case.object-meta.xml')));
+        report.checks.push({name:'Cloud actions on standard, custom, and metadata-only fields; each writes exactly one field without the whole object',status:'passed'});
+        provider.refresh();
+        provider.service.list=async()=>[{fullName:'RegressionFlow'}];
+        provider.service.xml=async()=>'<Flow><screens><name>Main</name><fields><name>A</name><fieldText>remote</fieldText></fields><fields><name>B</name><fieldText>remote sibling</fieldText></fields></screens></Flow>';
+        const flows=(await provider.getChildren()).find(node=>node.definition?.type==='Flow');
+        const flow=(await provider.getChildren(flows))[0];
+        const screens=(await provider.getChildren(flow)).find(node=>node.label==='Screens');
+        const selectedField=screens.children[0].children[0].children[0];
+        assert.match(selectedField.contextValue,/:download/);
+        const flowDir=vscode.Uri.joinPath(project,'force-app','main','default','flows');
+        await vscode.workspace.fs.createDirectory(flowDir);
+        const flowUri=vscode.Uri.joinPath(flowDir,'RegressionFlow.flow-meta.xml');
+        await vscode.workspace.fs.writeFile(flowUri,Buffer.from('<Flow><screens><name>Main</name><fields><name>A</name><fieldText>old</fieldText></fields><fields><name>B</name><fieldText>local sibling</fieldText></fields></screens></Flow>'));
+        const flowDoc=await vscode.workspace.openTextDocument(flowUri);await vscode.window.showTextDocument(flowDoc);
+        const flowEdit=new vscode.WorkspaceEdit();flowEdit.insert(flowUri,new vscode.Position(0,6),'<!-- unsaved flow comment -->');
+        assert.ok(await vscode.workspace.applyEdit(flowEdit));
+        await vscode.commands.executeCommand('betterOrgBrowser.retrieveChildMetadata',selectedField);
+        assert.match(flowDoc.getText(),/unsaved flow comment/);assert.match(flowDoc.getText(),/local sibling/);
+        assert.match(flowDoc.getText(),/<fieldText>remote<\/fieldText>/);assert.equal(flowDoc.isDirty,false);
+        report.checks.push({name:'Nested Flow child download updates only selected entry and preserves unsaved comment and local sibling',status:'passed'});
     }catch(error){report.errors.push({error:String(error),stack:error.stack});}
     await fs.writeFile(process.env.BOB_TEST_REPORT,JSON.stringify(report,null,2));
     if(report.errors.length)throw new Error('Offline host regression failed');

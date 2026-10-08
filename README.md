@@ -31,7 +31,7 @@ Implemented roots and depth:
 | CustomObject | Describe-backed Fields; retrieved Record Types, Validation Rules, Field Sets, List Views, Compact Layouts, Web Links, Business Processes, Sharing Reasons, Indexes; inspectable Search Layouts |
 | Flow | Variables, constants, formulas, screens and nested components, decisions and rules, assignments, loops, record operations, subflows, actions, waits/events, collection processors, transforms, start configuration |
 | PermissionSet | Object/field permissions, Apex class access, Flow access, custom permissions, tabs, user permissions, record types, pages, applications, custom metadata types, external data sources; values and single-entry sync |
-| Profile | Available permission sections and tab visibilities; browse only, no entry sync |
+| Profile | Available permission sections and tab visibilities; individual-entry download |
 | LightningComponentBundle / AuraDefinitionBundle | Files returned by Salesforce, including nested file paths; inspectable source |
 | Layout | Sections, columns, items, related lists |
 | FlexiPage | Regions and component/field instances |
@@ -53,7 +53,9 @@ Custom metadata type definitions (`__mdt`) appear under Custom Objects; their re
 - **Sync Permission Set Entry** appears inline on supported permission entries. Field/Object sync command IDs remain registered for compatibility. The full remote Permission Set is cached outside the source tree; only the chosen entry is merged into an existing local Permission Set. Package directories come from `sfdx-project.json`; multiple matching files prompt for a target. Open documents are edited and saved through VS Code.
 - **Search Metadata** is a staged QuickPick: choose/filter a type, then a component or folder, then deeper children. Selection reveals the node. It does not crawl the entire org.
 
-Browsable does not imply independently retrievable. Flow screens, layout items, record values, indexes, permission entries, and bundle files cannot be added to the manifest here. Select their containing component instead. Describe fields remain inspectable; only custom fields or fields also returned in CustomObject metadata receive manifest actions.
+Fields have a child-download action, including standard fields and fields returned only by metadata XML. Downloading a field extracts just its `CustomField` source file; parent object XML stays outside the project. If Salesforce exposes a field only through describe and returns no retrievable metadata (for example, a system-generated field), the command reports that without writing a file.
+
+Children stored inside parent XML also have cloud actions: Flow elements and nested components, layout sections/items and related lists, Lightning Page regions/components, Profile entries, custom metadata values, object indexes/search layouts, and standard application tab entries. These update only the selected fragment in an existing local parent file; retrieve the parent once if it does not yet exist. Unrelated XML and unsaved editor content are preserved. Individual bundle files download separately. These children do not become invalid standalone package.xml members. Informational rows and grouping folders remain browse-only.
 
 Syncing a Permission Set entry also regroups and alphabetically sorts its local section. Re-syncing a field moved to the bottom restores its position and removes leftover blank lines between top-level entries. Other entries keep their local values; comments and whitespace inside values remain intact.
 
