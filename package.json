@@ -2,7 +2,7 @@
   "name": "better-org-browser",
   "displayName": "Better Org Browser",
   "description": "Granular Salesforce metadata explorer for VS Code.",
-  "version": "0.0.4",
+  "version": "0.0.5",
   "publisher": "djlasher",
   "repository": {
     "type": "git",
@@ -132,6 +132,10 @@
         "command": "betterOrgBrowser.retrieveChildMetadata",
         "title": "Better Org Browser: Retrieve Child Metadata",
         "icon": "$(cloud-download)"
+      },
+      {
+        "command": "betterOrgBrowser.showRetrievalActivity",
+        "title": "Better Org Browser: Show Retrieval Activity"
       }
     ],
     "menus": {

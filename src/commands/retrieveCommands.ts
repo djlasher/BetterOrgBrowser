@@ -9,6 +9,7 @@ import { PackageXmlBuilder } from '../packageXml/packageXmlBuilder';
 export function registerRetrieveCommands(context: CommandContext): void {
     const output = vscode.window.createOutputChannel('Better Org Browser Retrieve');
     context.extension.subscriptions.push(output);
+    register(context, 'showRetrievalActivity', () => context.retrievalFeedback?.show());
     for (const mode of ['node', 'selected', 'manifest'] as const) {
         register(context, mode === 'node' ? 'retrieveMetadata' : mode === 'selected' ? 'retrieveSelectedMetadata' : 'retrieveManifest', async node => {
             const org = context.provider.selectedOrgTarget;

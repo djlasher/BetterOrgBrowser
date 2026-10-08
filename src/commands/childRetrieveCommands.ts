@@ -34,7 +34,7 @@ export function registerChildRetrieveCommands(context: CommandContext): void {
     let queue = Promise.resolve();
     const download = async (node?: MetadataNode): Promise<void> => {
         const org = context.provider.selectedOrgTarget;
-        if (!node || !org || node.org !== org || (!node.data.objectField && !node.data.fragment && !node.data.sourceFile)) { throw new Error('Select child metadata from the current org.'); }
+        if (!node || !org || node.org !== org || !node.canRetrieveChild) { throw new Error('Select retrievable child metadata from the current org. For Flow, Page Layout, or Lightning Page details, retrieve the containing component.'); }
         const root = await projectRoot();
         await vscode.window.withProgress({ location: vscode.ProgressLocation.Notification, title: `Retrieving ${node.label}` }, async () => {
             if (node.data.objectField) {

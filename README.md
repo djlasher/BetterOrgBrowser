@@ -46,6 +46,8 @@ Custom metadata type definitions (`__mdt`) appear under Custom Objects; their re
 
 ## Select, retrieve, and sync
 
+Every retrieval or permission sync immediately shows a spinning status-bar indicator and an activity message above the metadata tree, including queued operations. Completion or failure stays visible after the operation ends, even for fast cached downloads. Click the status indicator or run **Show Retrieval Activity** to see the timestamped operation history.
+
 - **Add / Remove from Manifest**, **Clear / Show Manifest Selections**, **Preview Manifest**, **Write Manifest to File**, and the persisted status bar count remain available.
 - **Retrieve Metadata** is the inline cloud-download button on each independently retrievable component, including whole objects, individual custom fields, object child metadata, labels, bundles, and metadata folders. It retrieves only the clicked member into your SFDX project without changing manifest selections. Informational rows remain inspect-only.
 - **Retrieve Selected Metadata** uses the current selections through a temporary manifest and retrieves into the selected SFDX project using normal CLI source behavior. It does not replace `manifest/package.xml`.
@@ -55,7 +57,7 @@ Custom metadata type definitions (`__mdt`) appear under Custom Objects; their re
 
 Fields have a child-download action, including standard fields and fields returned only by metadata XML. Downloading a field extracts just its `CustomField` source file; parent object XML stays outside the project. If Salesforce exposes a field only through describe and returns no retrievable metadata (for example, a system-generated field), the command reports that without writing a file.
 
-Children stored inside parent XML also have cloud actions: Flow elements and nested components, layout sections/items and related lists, Lightning Page regions/components, Profile entries, custom metadata values, object indexes/search layouts, and standard application tab entries. These update only the selected fragment in an existing local parent file; retrieve the parent once if it does not yet exist. Unrelated XML and unsaved editor content are preserved. Individual bundle files download separately. These children do not become invalid standalone package.xml members. Informational rows and grouping folders remain browse-only.
+Selected children stored inside parent XML also have cloud actions: Profile entries, custom metadata values, object indexes/search layouts, and standard application tab entries. These update only the selected fragment in an existing local parent file; retrieve the parent once if it does not yet exist. Unrelated XML and unsaved editor content are preserved. Individual bundle files download separately. These children do not become invalid standalone package.xml members. Flow internals, Page Layout sections/items, and Lightning Page regions/components remain fully visible and inspectable, but their download buttons are omitted: retrieve the complete Flow, Page Layout, or Lightning Page instead. Informational rows and grouping folders remain browse-only.
 
 Syncing a Permission Set entry also regroups and alphabetically sorts its local section. Re-syncing a field moved to the bottom restores its position and removes leftover blank lines between top-level entries. Other entries keep their local values; comments and whitespace inside values remain intact.
 

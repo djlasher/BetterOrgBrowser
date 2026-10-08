@@ -89,3 +89,24 @@ test('metadata-only fields survive describe failure and standard fields retain d
     assert.equal(children[0].name,'Name');assert.match(children[0].contextValue,/:download/);
     assert.deepEqual(children[0].data.objectField,{object:'Account',field:'Name'});
 });
+test('Flows, Layouts, and Lightning Pages retain all children but only parents offer retrieval',async()=>{
+    for(const [type,xml] of [
+        ['Flow','<Flow><screens><name>Main</name><fields><name>Input</name></fields></screens><start><label>Start</label></start></Flow>'],
+        ['Layout','<Layout><layoutSections><label>Details</label><layoutColumns><layoutItems><field>Name</field></layoutItems></layoutColumns></layoutSections></Layout>'],
+        ['FlexiPage','<FlexiPage><flexiPageRegions><name>main</name><itemInstances><componentInstance><identifier>panel</identifier><componentName>c:panel</componentName></componentInstance></itemInstances></flexiPageRegions></FlexiPage>']
+    ]){
+        const provider=new MetadataProvider(service({list:async()=>[{fullName:'Example'}],xml:async()=>xml}));
+        provider.setSelectedOrg('Test','test');
+        const parent=(await provider.getChildren(await root(provider,type)))[0];
+        assert.match(parent.contextValue,/:manifest/);
+        const descendants=await provider.getChildren(parent);
+        assert.ok(descendants.length);
+        let count=0;
+        const walk=nodes=>{for(const node of nodes){
+            count++;assert.equal(node.canRetrieveChild,false);assert.doesNotMatch(node.contextValue,/:download/);
+            assert.match(node.tooltip,/Browse \/ inspect only/);
+            if(node.children)walk(node.children);
+        }};
+        walk(descendants);assert.ok(count>=2);
+    }
+});
