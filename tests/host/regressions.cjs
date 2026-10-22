@@ -21,7 +21,10 @@ exports.run=async()=>{
         const permission=(await provider.getChildren(root))[0];
         const section=(await provider.getChildren(permission)).find(node=>node.label==='Field Permissions');
         const selected=section.children.find(node=>node.name===override);
-        const project=vscode.workspace.workspaceFolders[0].uri;
+        const {projectRoot}=require('../../out/workspace/project');
+        const project=await projectRoot();
+        assert.notEqual(project.fsPath,vscode.workspace.workspaceFolders[0].uri.fsPath);
+        report.checks.push({name:'Project discovered inside an opened parent folder',status:'passed'});
         const uri=vscode.Uri.joinPath(project,'force-app','main','default','permissionsets','Regression.permissionset-meta.xml');
         const local=wrap('    <label>Regression</label>\r\n    '+field(reason,'false')+'\r\n\r\n    <tabSettings><tab>Case</tab><visibility>Visible</visibility></tabSettings>\r\n    '+field(override)+'\r\n\r\n');
         await vscode.workspace.fs.writeFile(uri,Buffer.from(local));
@@ -54,7 +57,9 @@ exports.run=async()=>{
         for(const name of ['Industry','High_Risk_Reason__c','Metadata_Only__c']){
             const child=children.find(node=>node.name===name);
             assert.match(child.contextValue,/:download/);
+            assert.equal((await provider.getTreeItem(child)).iconPath.id,'circle-outline');
             await vscode.commands.executeCommand('betterOrgBrowser.retrieveChildMetadata',child);
+            assert.equal((await provider.getTreeItem(child)).iconPath.id,'circle-filled');
             const result=Buffer.from(await vscode.workspace.fs.readFile(vscode.Uri.joinPath(project,'force-app','main','default','objects','Case','fields',`${name}.field-meta.xml`))).toString('utf8');
             assert.match(result,/<CustomField xmlns=/);assert.ok(result.includes(`<fullName>${name}</fullName>`));
             assert.equal((result.match(/<fullName>/g)||[]).length,1);assert.doesNotMatch(result,/Do not download whole object/);
@@ -74,6 +79,26 @@ exports.run=async()=>{
         assert.equal(flow.data.manifest.type,'Flow');
         assert.equal(selectedField.name,'A');
         report.checks.push({name:'Flow descendants remain visible and inspectable; only the complete Flow has a retrieve action',status:'passed'});
+        provider.refresh();provider.service.list=async()=>[{fullName:'panel'}];
+        const bundleRoot=(await provider.getChildren()).find(node=>node.definition?.type==='LightningComponentBundle');
+        const bundle=(await provider.getChildren(bundleRoot))[0];
+        assert.equal((await provider.getTreeItem(bundle)).iconPath.id,'circle-outline');
+        const bundleDir=vscode.Uri.joinPath(project,'force-app','main','default','lwc','panel');
+        const bundleFile=vscode.Uri.joinPath(bundleDir,'panel.js-meta.xml');
+        await vscode.workspace.fs.createDirectory(bundleDir);
+        await vscode.workspace.fs.writeFile(bundleFile,Buffer.from('<LightningComponentBundle/>'));
+        const waitForIcon=async expected=>{
+            for(let i=0;i<50;i++){
+                if((await provider.getTreeItem(bundle)).iconPath.id===expected)return;
+                await new Promise(resolve=>setTimeout(resolve,100));
+            }
+            assert.fail(`Expected local bundle icon ${expected}`);
+        };
+        await waitForIcon('circle-filled');
+        assert.match((await provider.getTreeItem(bundle)).tooltip,/Saved locally:/);
+        await vscode.workspace.fs.delete(bundleFile);
+        await waitForIcon('circle-outline');
+        report.checks.push({name:'Field downloads fill local markers; external LWC file creation and deletion automatically update markers',status:'passed'});
     }catch(error){report.errors.push({error:String(error),stack:error.stack});}
     await fs.writeFile(process.env.BOB_TEST_REPORT,JSON.stringify(report,null,2));
     if(report.errors.length)throw new Error('Offline host regression failed');

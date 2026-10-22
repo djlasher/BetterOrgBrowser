@@ -14,7 +14,8 @@ async function main() {
     }
     if(!executable)throw new Error('Set CODE_EXECUTABLE to the VS Code desktop executable.');
     const temporary=await fs.mkdtemp(path.join(os.tmpdir(),'better-org-host-test-'));
-    const project=path.join(temporary,'qa project with spaces');
+    const workspace=path.join(temporary,'workspace parent');
+    const project=path.join(workspace,'qa project with spaces');
     const report=process.env.BOB_TEST_REPORT || path.join(temporary,'report.json');
     try {
         await fs.mkdir(path.join(project,'force-app','main','default','permissionsets'),{recursive:true});
@@ -25,7 +26,7 @@ async function main() {
         const env={...process.env,SF_DISABLE_LOG_FILE:'true',BOB_TEST_REPORT:report};
         delete env.ELECTRON_RUN_AS_NODE;
         const child=spawn(executable,[`--extensionDevelopmentPath=${path.resolve(__dirname,'..')}`,`--extensionTestsPath=${path.join(__dirname,'host',offline?'regressions.cjs':'index.cjs')}`,
-            `--user-data-dir=${profile}`,`--extensions-dir=${path.join(temporary,'extensions')}`,'--disable-extensions','--disable-workspace-trust','--skip-welcome','--skip-release-notes','--new-window',project],
+            `--user-data-dir=${profile}`,`--extensions-dir=${path.join(temporary,'extensions')}`,'--disable-extensions','--disable-workspace-trust','--skip-welcome','--skip-release-notes','--new-window',offline?workspace:project],
             {env,stdio:'inherit',windowsHide:true});
         const code=await new Promise((resolve,reject)=>{child.on('error',reject);child.on('exit',resolve);});
         let result;

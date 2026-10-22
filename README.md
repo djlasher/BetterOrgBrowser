@@ -10,7 +10,7 @@ npm run compile
 npm test
 ```
 
-Open this extension repository in VS Code and press F5. In the Extension Development Host, open a **separate Salesforce DX project**, then use **Better Org Browser: Select Salesforce Org**. Authenticate beforehand with Salesforce CLI (`sf org login web`). This repository is not an SFDX project.
+Open this extension repository in VS Code and press F5. In the Extension Development Host, open a **separate Salesforce DX project**, then use **Better Org Browser: Select Salesforce Org**. Authenticate beforehand with Salesforce CLI (`sf org login web`). This repository is not an SFDX project. Better Org Browser discovers `sfdx-project.json` within opened workspace folders and in the nearest containing project when you open a source subfolder. If more than one project is found, choose the target once for the session; all operations use that project and its configured package directories.
 
 With no selected org, the browser shows a **Select Salesforce Org** welcome button. After selection, a notification confirms the choice; the selected org stays visible above the metadata tree and in a clickable status-bar indicator. Restored selections show the same persistent indicators after reload.
 
@@ -43,6 +43,8 @@ Implemented roots and depth:
 | ApexClass, ApexTrigger, CustomTab, StaticResource, Queue, Group, NamedCredential, ExternalCredential, AuthProvider, ConnectedApp, RemoteSiteSetting, CustomPermission | Component listing and manifest selection |
 
 Custom metadata type definitions (`__mdt`) appear under Custom Objects; their records appear under Custom Metadata Records. Empty optional XML sections are omitted. Unsupported or inaccessible metadata produces a local error row rather than disabling the browser.
+
+Retrievable items show a **filled circle** when their source exists in the selected local project and an **outline circle** when it does not. Hover to see the local path. Markers include previously retrieved files, update after retrieval, and follow filesystem creates/changes/deletions. Embedded entries (such as Permission Set entries and custom labels) are checked individually. These markers indicate saved local presence, not equality with the selected org or completeness of all child metadata. If a project cannot be resolved unambiguously, the normal icon stays visible until a project is selected.
 
 ## Select, retrieve, and sync
 

@@ -1,15 +1,42 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
 import { readTextFile } from './textFile';
-export async function projectRoot(): Promise<vscode.Uri> {
-    const roots: vscode.Uri[] = [];
+let selectedProject: string | undefined;
+const excluded = '**/{node_modules,.git,.sf,.sfdx}/**';
+export async function discoverProjects(): Promise<vscode.Uri[]> {
+    const roots = new Map<string, vscode.Uri>();
     for (const folder of vscode.workspace.workspaceFolders ?? []) {
-        try { await vscode.workspace.fs.stat(vscode.Uri.joinPath(folder.uri, 'sfdx-project.json')); roots.push(folder.uri); } catch { /* Not an SFDX project. */ }
+        // Also support opening a package/source subfolder of a Salesforce project.
+        let current = folder.uri;
+        while (true) {
+            try {
+                await vscode.workspace.fs.stat(vscode.Uri.joinPath(current, 'sfdx-project.json'));
+                roots.set(current.toString(), current); break;
+            } catch { /* Continue to the nearest containing project. */ }
+            const parent = vscode.Uri.joinPath(current, '..');
+            if (parent.toString() === current.toString()) { break; }
+            current = parent;
+        }
+        for (const file of await vscode.workspace.findFiles(new vscode.RelativePattern(folder.uri, '**/sfdx-project.json'), excluded)) {
+            const root = vscode.Uri.joinPath(file, '..');
+            roots.set(root.toString(), root);
+        }
     }
+    return [...roots.values()].sort((a, b) => a.fsPath.localeCompare(b.fsPath));
+}
+export function clearProjectSelection(): void { selectedProject = undefined; }
+export async function projectRoot(prompt?: true): Promise<vscode.Uri>;
+export async function projectRoot(prompt: false): Promise<vscode.Uri | undefined>;
+export async function projectRoot(prompt = true): Promise<vscode.Uri | undefined> {
+    const roots = await discoverProjects();
+    const selected = roots.find(root => root.toString() === selectedProject);
+    if (selected) { return selected; }
+    if (!prompt && roots.length !== 1) { return undefined; }
     if (!roots.length) { throw new Error('Open a Salesforce DX project containing sfdx-project.json.'); }
     if (roots.length === 1) { return roots[0]; }
     const pick = await vscode.window.showQuickPick(roots.map(uri => ({ label: uri.fsPath, uri })), { placeHolder: 'Select Salesforce DX project' });
     if (!pick) { throw new Error('Project selection cancelled.'); }
+    selectedProject = pick.uri.toString();
     return pick.uri;
 }
 export async function permissionSetFile(root: vscode.Uri, name: string): Promise<vscode.Uri> {
