@@ -1,5 +1,7 @@
 # BetterOrgBrowser
 
+See [CHANGELOG.md](CHANGELOG.md) for upcoming release changes and [the devlog](docs/DEVLOG.md) for implementation history.
+
 A native VS Code Salesforce metadata tree that keeps drilling into meaningful metadata children. Browse, select valid package members, retrieve source, and sync one remote Permission Set entry into a trimmed local file.
 
 ## Getting started

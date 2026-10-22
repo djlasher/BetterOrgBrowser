@@ -4,6 +4,28 @@ Session-based development history for BetterOrgBrowser.
 
 Use versions instead of dates. Keep this to one entry per work session.
 
+## v0.0.6 (unreleased) - Project Discovery, Local Source Status, And Field Formatting
+
+### Completed
+
+- Discover Salesforce projects below workspace roots and above opened source subfolders. Deduplicate discoveries, exclude dependency/cache directories, and remember a chosen target when several projects are available.
+- Index configured package directories for saved-local indicators. Check embedded entries individually rather than assuming they exist because their parent file exists.
+- Show filled/outline circles and local-path tooltips, with filesystem watchers and post-command invalidation keeping indicators current.
+- Preserve retrieval activity messages when only local tree-item status changes.
+- Fix individual field extraction retaining the parent object's indentation: remove the outer margin only from structural XML whitespace, preserving multiline field values, CDATA, entities, and line endings.
+- Add a root CHANGELOG.md with all changes from this work session grouped under the next release. The packaged build remains 0.0.6 while PR #6 is open.
+
+### Validation
+
+- Compilation and all 50 automated tests passed. Added coverage for nested/containing project discovery, multiple-project selection, local files/embedded entries, deletion, and field indentation with spaces/LF and tabs/CRLF.
+- Isolated VS Code host opened a parent folder and successfully located its nested project. Individual field retrieval changed outline markers to filled; externally creating/deleting an LWC descriptor updated its marker automatically.
+- Existing Permission Set sorting/editor-save and Flow browsing regressions passed. Remote host-test boundaries used fixtures; no live org was modified.
+
+### Scope Notes
+
+- Local presence is not a comparison against the selected org. Ambiguous project resolution keeps the original icon until a project is chosen.
+- Prior entries below are historical development-session notes; their version labels and listed gaps do not describe the current build. See the root changelog for the next release's scope.
+
 ## v0.0.5 - Manifest UX And Metadata Path Polish
 
 ### Completed

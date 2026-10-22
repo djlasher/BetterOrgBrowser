@@ -1,7 +1,7 @@
 import { XmlSelector } from '../metadata/metadataModel';
 import { parseXml, object, text } from '../metadata/parsers/xml';
 
-interface Element { tag: string; start: number; end: number; close: number; children: Element[] }
+interface Element { tag: string; start: number; openEnd: number; end: number; close: number; children: Element[] }
 function keyValue(xml: string, tag: string, key: string): string {
     if (key === '$text') { return text(parseXml(`<container>${xml}</container>`, 'container')[tag]); }
     let value: unknown = parseXml(xml, tag);
@@ -21,7 +21,7 @@ function document(xml: string, root: string): Element {
             element.close = start; element.end = start + token.length;
         } else {
             const tag = /^<([^\s/>]+)/.exec(token)![1].split(':').pop()!;
-            const element: Element = { tag, start, end: start + token.length, close: start, children: [] };
+            const element: Element = { tag, start, openEnd: start + token.length, end: start + token.length, close: start, children: [] };
             if (stack.length) { stack[stack.length - 1].children.push(element); } else { result = element; }
             if (!/\/\s*>$/.test(token)) { stack.push(element); }
         }
@@ -78,5 +78,27 @@ export function fieldDocument(block: string): string {
     const field = parseXml(block, 'fields');
     if (!text(field.fullName)) { throw new Error('Retrieved field has no fullName.'); }
     if (/<\/?\w+:/.test(block)) { throw new Error('Prefixed field XML is not supported.'); }
-    return '<?xml version="1.0" encoding="UTF-8"?>\n' + block.replace(/^<fields(?:\s[^>]*)?>/, '<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">').replace(/<\/fields>$/, '</CustomField>') + '\n';
+    const eol = block.includes('\r\n') ? '\r\n' : '\n';
+    // Extraction starts at <fields>, so only later lines retain the parent's
+    // indentation. Remove that margin from structural whitespace, never values.
+    const margin = /\n([\t ]+)<\/fields>$/.exec(block)?.[1];
+    if (margin) {
+        const edits: { start: number; end: number; value: string }[] = [];
+        const walk = (element: Element): void => {
+            if (!element.children.length) { return; }
+            let start = element.openEnd;
+            for (const child of [...element.children, { start: element.close, end: element.close }]) {
+                const gap = block.slice(start, child.start);
+                if (/^\s*$/.test(gap)) {
+                    edits.push({ start, end: child.start, value: gap.replace(/(\r?\n)([\t ]*)/g,
+                        (_, newline: string, indent: string) => newline + (indent.startsWith(margin) ? indent.slice(margin.length) : indent)) });
+                }
+                start = child.end;
+            }
+            element.children.forEach(walk);
+        };
+        walk(document(block, 'fields'));
+        for (const edit of edits.sort((a, b) => b.start - a.start)) { block = block.slice(0, edit.start) + edit.value + block.slice(edit.end); }
+    }
+    return '<?xml version="1.0" encoding="UTF-8"?>' + eol + block.replace(/^<fields(?:\s[^>]*)?>/, '<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">').replace(/<\/fields>$/, '</CustomField>') + eol;
 }
