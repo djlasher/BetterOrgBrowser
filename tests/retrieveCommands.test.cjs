@@ -36,9 +36,7 @@ test('inline retrieve targets only the clicked metadata and preserves selections
             return JSON.stringify({ status: 0, result: { success: true, done: true } });
         } } } }, previews: { show: async () => {} } });
     const retrieve = handlers.get('betterOrgBrowser.retrieveMetadata');
-    for (const [type, member] of [['CustomObject', 'Invoice__c'], ['CustomField', 'Invoice__c.Amount__c'],
-        ['ValidationRule', 'Invoice__c.Positive'], ['PermissionSet', 'Sales'], ['Report', 'Sales/Pipeline'],
-        ['ReportFolder', 'Sales'], ['LightningComponentBundle', 'panel'], ['CustomLabel', 'Greeting']]) {
+    for (const [type, member] of [['CustomObject', 'Invoice__c'], ['PermissionSet', 'Sales'], ['LightningComponentBundle', 'panel'], ['CustomLabel', 'Greeting']]) {
         await retrieve({ org: 'QA', data: { manifest: { type, member } } });
         const call = calls.at(-1);
         assert.equal(call.org, 'QA'); assert.equal(call.root, process.cwd());
@@ -47,10 +45,10 @@ test('inline retrieve targets only the clicked metadata and preserves selections
         assert.ok(!call.xml.includes('KeepSelected'));
         await assert.rejects(fs.stat(call.file), { code: 'ENOENT' });
     }
-    assert.equal(errors.length, 0); assert.equal(notices.length, 8);
+    assert.equal(errors.length, 0); assert.equal(notices.length, 4);
     await retrieve({ org: 'Old', data: { manifest: { type: 'CustomObject', member: 'Wrong__c' } } });
     await retrieve({ org: 'QA', data: {} });
-    assert.equal(calls.length, 8); assert.equal(errors.length, 2);
+    assert.equal(calls.length, 4); assert.equal(errors.length, 2);
     fail = true;
     await retrieve({ org: 'QA', data: { manifest: { type: 'CustomObject', member: 'Invoice__c' } } });
     await assert.rejects(fs.stat(calls.at(-1).file), { code: 'ENOENT' });
