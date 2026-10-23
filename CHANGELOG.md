@@ -3,7 +3,18 @@
 User-facing changes are collected under Unreleased until a release is published.
 Development builds may already carry the planned version number.
 
-## Unreleased — planned 0.0.6
+## Unreleased — planned 0.0.7
+
+### 2026-10-23
+
+- Stage report, dashboard, email-template/folder, and independently retrievable object-child requests in a disposable Salesforce project before copying source into the user's project.
+- Copy only explicitly requested files and missing parent descriptors. Existing parent descriptors are preserved; incidental object descriptors have child definitions removed. Folder downloads do not import their reports/templates/dashboards.
+- Apply this filtering to inline retrieval and Retrieve Selected Metadata. Explicit whole-object retrieval and Retrieve Manifest retain their requested full scope.
+- Existing field extraction, Permission Set entry sync, and bundle-file extraction continue writing only the selected child.
+- Validate requested files before copying and remove staging on success or failure. No fallback retrieves the entire parent into the user's source tree.
+- Compilation and 51 automated tests passed. Isolated VS Code regression injected extra reports and object fields, verified their exclusion and parent preservation, and checked missing-member failure cleanup. Remote boundaries used fixtures.
+
+## 0.0.6 — previous development build
 
 ### 2026-10-22
 

@@ -6,6 +6,7 @@ import { CommandContext, register } from './commandContext';
 import { projectRoot } from '../workspace/project';
 import { formatRetrieveResult } from '../salesforce/retrieveResultFormatter';
 import { PackageXmlBuilder } from '../packageXml/packageXmlBuilder';
+import { isScopedMember, retrieveScoped } from '../salesforce/scopedRetrieve';
 export function registerRetrieveCommands(context: CommandContext): void {
     const output = vscode.window.createOutputChannel('Better Org Browser Retrieve');
     context.extension.subscriptions.push(output);
@@ -22,6 +23,21 @@ export function registerRetrieveCommands(context: CommandContext): void {
             }
             if (mode === 'selected' && !selections.getCount()) { throw new Error('Add metadata to manifest selections first.'); }
             const root = await projectRoot();
+            if (mode !== 'manifest') {
+                const scoped = selections.getSelections().filter(isScopedMember);
+                if (scoped.length) {
+                    const written: string[] = [];
+                    await vscode.window.withProgress({ location: vscode.ProgressLocation.Notification, title: 'Retrieving selected metadata only' }, async () => {
+                        for (const member of scoped) { written.push(...await retrieveScoped(context.provider.service.cli, org, root, member)); }
+                    });
+                    output.appendLine(`Saved selected metadata only:\n${written.join('\n')}`);
+                    await context.previews.show('retrieve-result.md', '# Retrieve Result\n\nSaved selected metadata and missing parent descriptors only:\n\n' + written.map(file => `- ${file}`).join('\n'));
+                    const remaining = new PackageXmlBuilder();
+                    for (const member of selections.getSelections().filter(member => !isScopedMember(member))) { remaining.add(member.type, member.member); }
+                    if (!remaining.getCount()) { void vscode.window.showInformationMessage(`Retrieve complete: ${written.length} selected source file(s) saved.`); return; }
+                    selections = remaining;
+                }
+            }
             const xml = selections.build();
             let temp: string | undefined;
             try {

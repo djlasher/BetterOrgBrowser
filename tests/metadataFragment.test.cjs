@@ -1,6 +1,11 @@
 const test=require('node:test');
 const assert=require('node:assert/strict');
 const {extractFragment,mergeFragment,fieldDocument}=require('../out/salesforce/metadataFragment');
+test('object dependency shell excludes sibling child metadata but retains object settings',()=>{
+    const {objectShell}=require('../out/salesforce/metadataFragment');
+    const xml='<CustomObject><label>Invoice</label><deploymentStatus>Deployed</deploymentStatus><fields><fullName>Other__c</fullName></fields><validationRules><fullName>OtherRule</fullName></validationRules><recordTypes><fullName>OtherType</fullName></recordTypes></CustomObject>';
+    assert.equal(objectShell(xml),'<CustomObject><label>Invoice</label><deploymentStatus>Deployed</deploymentStatus></CustomObject>');
+});
 for(const [indent,eol] of [['    ','\n'],['\t','\r\n']]){
     test(`field extraction removes parent indentation and preserves value whitespace (${JSON.stringify(indent)}, ${JSON.stringify(eol)})`,()=>{
         const lines=['<CustomObject>',`${indent}<fields>`,`${indent.repeat(2)}<fullName>Risk__c</fullName>`,

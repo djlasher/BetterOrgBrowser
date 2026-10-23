@@ -4,7 +4,15 @@ Session-based development history for BetterOrgBrowser.
 
 Use versions instead of dates. Keep this to one entry per work session.
 
-## v0.0.6 (unreleased) - Project Discovery, Local Source Status, And Field Formatting
+## v0.0.7 (unreleased) - Keep Child Retrieval Scoped
+
+- Added isolated staging for foldered metadata, folders themselves, and object-child metadata that previously used direct CLI source retrieval. Allowlist exact requested source paths and missing parent descriptors before copying.
+- Preserve existing parent files. Strip decomposed child sections from incidental object descriptors and never copy sibling files returned by the CLI.
+- Reuse the existing package-aware destination resolver and editor-aware writer. Inline and selected-member retrieval use the scoped path; explicit whole-object/manifest retrieval retains its scope.
+- Confirmed field extraction and Permission Set sync already isolate selected children from cached parent XML.
+- Compilation and 51 automated tests passed. Real VS Code host regression with fixture responses verified report/folder isolation, object-shell filtering, existing-folder preservation, and staging cleanup when the requested member was absent.
+
+## v0.0.6 (development build) - Project Discovery, Local Source Status, And Field Formatting
 
 ### Completed
 
