@@ -34,6 +34,7 @@ export class RetrievalFeedback implements vscode.Disposable {
             throw error;
         } finally {
             this.pending.delete(id);
+            this.context.provider.refreshLocalState?.();
             this.render();
         }
     }

@@ -10,7 +10,7 @@ const vscode = {
     EventEmitter:class {event=()=>({dispose(){}});fire(){}dispose(){}},
     StatusBarAlignment:{Left:1},
     commands:{registerCommand:(id,callback)=>{handlers.set(id,callback);return {dispose(){}};}},
-    workspace:{registerTextDocumentContentProvider:()=>({dispose(){}})},
+    workspace:{createFileSystemWatcher:()=>({dispose(){},onDidCreate:()=>({dispose(){}}),onDidChange:()=>({dispose(){}}),onDidDelete:()=>({dispose(){}})}),onDidChangeWorkspaceFolders:()=>({dispose(){}}),registerTextDocumentContentProvider:()=>({dispose(){}})},
     window:{showErrorMessage:()=>new Promise(()=>{}),createOutputChannel:()=>({appendLine(){},show(){},dispose(){}}),
         createTreeView:()=>({dispose(){}}),createStatusBarItem:()=>({show(){},dispose(){}})}
 };

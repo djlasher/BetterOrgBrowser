@@ -13,7 +13,7 @@ class EventEmitter {
 const vscode={
     EventEmitter,TreeItem:class{},ThemeIcon:class{},TreeItemCollapsibleState:{None:0,Collapsed:1},StatusBarAlignment:{Left:1},ProgressLocation:{Notification:15},
     commands:{registerCommand:(name,fn)=>{handlers.set(name,fn);return{dispose(){}};}},
-    workspace:{registerTextDocumentContentProvider:()=>({dispose(){}})},
+    workspace:{createFileSystemWatcher:()=>({dispose(){},onDidCreate:()=>({dispose(){}}),onDidChange:()=>({dispose(){}}),onDidDelete:()=>({dispose(){}})}),onDidChangeWorkspaceFolders:()=>({dispose(){}}),registerTextDocumentContentProvider:()=>({dispose(){}})},
     window:{
         createOutputChannel:()=>({appendLine(){},show(){},dispose(){}}),
         createTreeView:()=>{const view={dispose(){}};trees.push(view);return view;},

@@ -14,11 +14,15 @@ import { registerRetrieveCommands } from './commands/retrieveCommands';
 import { registerMetadataCommands } from './commands/metadataCommands';
 import { registerPermissionSetCommands } from './commands/permissionSetCommands';
 import { registerChildRetrieveCommands } from './commands/childRetrieveCommands';
+import { LocalMetadata } from './workspace/localMetadata';
 
 export function activate(extension: vscode.ExtensionContext): { provider: MetadataProvider } {
     const cli = new OrgService();
     const service = new MetadataService(cli);
     const provider = new MetadataProvider(service);
+    const local = new LocalMetadata(() => provider.localChanged());
+    provider.local = local;
+    local.watch();
     const tree = vscode.window.createTreeView<MetadataNode>('betterOrgBrowserView', { treeDataProvider: provider });
     const manifest = new PackageXmlBuilder();
     manifest.replaceSelections(loadManifestSelections(extension));
@@ -45,8 +49,8 @@ export function activate(extension: vscode.ExtensionContext): { provider: Metada
         orgStatus.show();
     };
     updateOrgFeedback();
-    extension.subscriptions.push(cli, service, provider, tree, status, orgStatus, previews,
-        provider.onDidChangeTreeData(updateOrgFeedback),
+    extension.subscriptions.push(cli, service, provider, local, tree, status, orgStatus, previews,
+        provider.onDidChangeTreeData(node => { if (!node) { updateOrgFeedback(); } }),
         vscode.workspace.registerTextDocumentContentProvider('better-org-browser', previews));
     registerOrgCommands(context);
     registerManifestCommands(context);

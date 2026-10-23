@@ -2,7 +2,7 @@
   "name": "better-org-browser",
   "displayName": "Better Org Browser",
   "description": "Granular Salesforce metadata explorer for VS Code.",
-  "version": "0.0.5",
+  "version": "0.0.6",
   "publisher": "djlasher",
   "repository": {
     "type": "git",

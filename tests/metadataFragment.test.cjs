@@ -1,6 +1,22 @@
 const test=require('node:test');
 const assert=require('node:assert/strict');
 const {extractFragment,mergeFragment,fieldDocument}=require('../out/salesforce/metadataFragment');
+for(const [indent,eol] of [['    ','\n'],['\t','\r\n']]){
+    test(`field extraction removes parent indentation and preserves value whitespace (${JSON.stringify(indent)}, ${JSON.stringify(eol)})`,()=>{
+        const lines=['<CustomObject>',`${indent}<fields>`,`${indent.repeat(2)}<fullName>Risk__c</fullName>`,
+            `${indent.repeat(2)}<description>First line`,`${indent.repeat(3)}keep these spaces &amp; entity`,`${indent.repeat(2)}</description>`,
+            `${indent.repeat(2)}<formula><![CDATA[IF(true,`,`${indent.repeat(3)}1, 0)]]></formula>`,
+            `${indent.repeat(2)}<valueSet>`,`${indent.repeat(3)}<restricted>true</restricted>`,`${indent.repeat(2)}</valueSet>`,`${indent}</fields>`,'</CustomObject>'];
+        const block=extractFragment(lines.join(eol),'CustomObject',[{tag:'fields',key:'fullName',name:'Risk__c'}]);
+        const result=fieldDocument(block);
+        assert.ok(result.includes(`${eol}${indent}<fullName>Risk__c</fullName>`));
+        assert.ok(result.includes(`${eol}${indent}<valueSet>${eol}${indent.repeat(2)}<restricted>true</restricted>${eol}${indent}</valueSet>`));
+        assert.ok(result.includes(`<description>First line${eol}${indent.repeat(3)}keep these spaces &amp; entity${eol}${indent.repeat(2)}</description>`));
+        assert.ok(result.includes(`<![CDATA[IF(true,${eol}${indent.repeat(3)}1, 0)]]>`));
+        assert.ok(result.endsWith(`${eol}</CustomField>${eol}`));
+        if(eol==='\r\n')assert.doesNotMatch(result,/(?<!\r)\n/);
+    });
+}
 test('individual field extraction produces one deployable CustomField without sibling or object data',()=>{
     const xml='<CustomObject><label>Whole object</label><fields><fullName>Industry</fullName><label>Industry &amp; Sector</label></fields><fields><fullName>Other__c</fullName></fields></CustomObject>';
     const block=extractFragment(xml,'CustomObject',[{tag:'fields',key:'fullName',name:'Industry'}]);

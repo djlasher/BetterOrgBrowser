@@ -3,19 +3,31 @@ import { MetadataNode } from './metadataNode';
 import { metadataRegistry, MetadataDefinition } from './metadataRegistry';
 import { MetadataService } from '../salesforce/metadataService';
 import { SessionCache } from '../cache/sessionCache';
+import type { LocalMetadata } from '../workspace/localMetadata';
 export class MetadataProvider implements vscode.TreeDataProvider<MetadataNode>, vscode.Disposable {
     private readonly changed = new vscode.EventEmitter<MetadataNode | undefined | void>();
     readonly onDidChangeTreeData = this.changed.event;
     private readonly children = new SessionCache<MetadataNode[]>();
     private roots: MetadataNode[] = [];
     private generation = 0;
+    private readonly visible = new Set<MetadataNode>();
+    local?: LocalMetadata;
     selectedOrgTarget?: string;
     selectedOrgName?: string;
     constructor(readonly service: MetadataService) {}
     dispose(): void { this.changed.dispose(); }
-    refresh(): void { this.generation++; this.service.clear(); this.children.clear(); this.roots = []; this.changed.fire(); }
+    refresh(): void { this.generation++; this.service.clear(); this.children.clear(); this.roots = []; this.visible.clear(); this.local?.invalidate(); this.changed.fire(); }
     setSelectedOrg(label?: string, target?: string): void { this.selectedOrgName = label; this.selectedOrgTarget = target; this.refresh(); }
-    getTreeItem(node: MetadataNode): vscode.TreeItem { return node; }
+    async getTreeItem(node: MetadataNode): Promise<vscode.TreeItem> {
+        this.visible.add(node);
+        const state = await this.local?.state(node);
+        if (!state) { return node; }
+        const message = state.present ? `Saved locally: ${state.file!.fsPath}\nLocal presence does not mean this matches the org.` : state.reason;
+        return { ...node, iconPath: state.present === undefined ? node.iconPath : new vscode.ThemeIcon(state.present ? 'circle-filled' : 'circle-outline'),
+            tooltip: `${node.tooltip}\n${message}` };
+    }
+    refreshLocalState(): void { this.local?.invalidate(); }
+    localChanged(): void { for (const node of this.visible) { this.changed.fire(node); } }
     getParent(node: MetadataNode): MetadataNode | undefined { return node.parent; }
     async getChildren(node?: MetadataNode): Promise<MetadataNode[]> {
         if (!node) {
