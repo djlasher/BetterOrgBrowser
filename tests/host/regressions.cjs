@@ -99,6 +99,45 @@ exports.run=async()=>{
         await vscode.workspace.fs.delete(bundleFile);
         await waitForIcon('circle-outline');
         report.checks.push({name:'Field downloads fill local markers; external LWC file creation and deletion automatically update markers',status:'passed'});
+        const staged=[];
+        provider.service.cli.retrieveManifest=async(org,manifest,cwd)=>{
+            assert.notEqual(cwd,project.fsPath);staged.push(cwd);
+            const files={
+                'reports/Sales/Pipeline.report-meta.xml':'<Report><name>Pipeline</name></Report>',
+                'reports/Sales/Unrequested.report-meta.xml':'<Report><name>Unrequested</name></Report>',
+                'reports/Sales.reportFolder-meta.xml':'<ReportFolder><name>Remote Sales</name></ReportFolder>',
+                'objects/Invoice__c/Invoice__c.object-meta.xml':'<CustomObject><label>Invoice</label><fields><fullName>Sibling__c</fullName></fields><recordTypes><fullName>SiblingType</fullName></recordTypes></CustomObject>',
+                'objects/Invoice__c/validationRules/Positive.validationRule-meta.xml':'<ValidationRule><fullName>Positive</fullName></ValidationRule>',
+                'objects/Invoice__c/fields/Sibling__c.field-meta.xml':'<CustomField><fullName>Sibling__c</fullName></CustomField>'
+            };
+            const path=require('node:path');
+            for(const [relative,content]of Object.entries(files)){
+                const destination=path.join(cwd,'force-app','main','default',relative);
+                await fs.mkdir(path.dirname(destination),{recursive:true});await fs.writeFile(destination,content);
+            }
+            return JSON.stringify({status:0,result:{success:true,done:true}});
+        };
+        const source=vscode.Uri.joinPath(project,'force-app','main','default');
+        const reports=vscode.Uri.joinPath(source,'reports');await vscode.workspace.fs.createDirectory(reports);
+        const folderFile=vscode.Uri.joinPath(reports,'Sales.reportFolder-meta.xml');
+        const localFolder='<ReportFolder><name>Keep local folder</name></ReportFolder>';
+        await vscode.workspace.fs.writeFile(folderFile,Buffer.from(localFolder));
+        await vscode.commands.executeCommand('betterOrgBrowser.retrieveMetadata',{label:'Pipeline',org:'offline-qa',data:{manifest:{type:'Report',member:'Sales/Pipeline'}}});
+        assert.match(Buffer.from(await vscode.workspace.fs.readFile(vscode.Uri.joinPath(reports,'Sales','Pipeline.report-meta.xml'))).toString(),/Pipeline/);
+        assert.equal(Buffer.from(await vscode.workspace.fs.readFile(folderFile)).toString(),localFolder);
+        await assert.rejects(vscode.workspace.fs.stat(vscode.Uri.joinPath(reports,'Sales','Unrequested.report-meta.xml')));
+        await vscode.commands.executeCommand('betterOrgBrowser.retrieveMetadata',{label:'Sales',org:'offline-qa',data:{manifest:{type:'ReportFolder',member:'Sales'}}});
+        assert.match(Buffer.from(await vscode.workspace.fs.readFile(folderFile)).toString(),/Remote Sales/);
+        await assert.rejects(vscode.workspace.fs.stat(vscode.Uri.joinPath(reports,'Sales','Unrequested.report-meta.xml')));
+        await vscode.commands.executeCommand('betterOrgBrowser.retrieveMetadata',{label:'Positive',org:'offline-qa',data:{manifest:{type:'ValidationRule',member:'Invoice__c.Positive'}}});
+        const objectFile=vscode.Uri.joinPath(source,'objects','Invoice__c','Invoice__c.object-meta.xml');
+        const shell=Buffer.from(await vscode.workspace.fs.readFile(objectFile)).toString();
+        assert.match(shell,/<label>Invoice/);assert.doesNotMatch(shell,/Sibling|<fields>|<recordTypes>/);
+        await assert.rejects(vscode.workspace.fs.stat(vscode.Uri.joinPath(source,'objects','Invoice__c','fields','Sibling__c.field-meta.xml')));
+        const {retrieveScoped}=require('../../out/salesforce/scopedRetrieve');
+        await assert.rejects(retrieveScoped(provider.service.cli,'offline-qa',project,{type:'Report',member:'Sales/Missing'}),/did not return all files/);
+        for(const directory of staged)await assert.rejects(fs.stat(directory),{code:'ENOENT'});
+        report.checks.push({name:'Staged report/folder/object-child retrieval drops unrequested siblings, preserves existing folder, strips object children, and cleans failed staging',status:'passed'});
     }catch(error){report.errors.push({error:String(error),stack:error.stack});}
     await fs.writeFile(process.env.BOB_TEST_REPORT,JSON.stringify(report,null,2));
     if(report.errors.length)throw new Error('Offline host regression failed');

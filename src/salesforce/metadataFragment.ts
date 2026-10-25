@@ -102,3 +102,12 @@ export function fieldDocument(block: string): string {
     }
     return '<?xml version="1.0" encoding="UTF-8"?>' + eol + block.replace(/^<fields(?:\s[^>]*)?>/, '<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">').replace(/<\/fields>$/, '</CustomField>') + eol;
 }
+
+/** A dependency descriptor must not import the object's other child definitions. */
+export function objectShell(xml: string): string {
+    const children = new Set(['fields', 'recordTypes', 'validationRules', 'fieldSets', 'listViews', 'compactLayouts', 'webLinks', 'businessProcesses', 'sharingReasons', 'indexes']);
+    for (const child of document(xml, 'CustomObject').children.reverse()) {
+        if (children.has(child.tag)) { xml = xml.slice(0, child.start) + xml.slice(child.end); }
+    }
+    return xml;
+}

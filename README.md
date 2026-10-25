@@ -50,6 +50,8 @@ Retrievable items show a **filled circle** when their source exists in the selec
 
 ## Select, retrieve, and sync
 
+Child retrieval does not import unselected siblings. Report/dashboard/email and object-child requests are staged outside the project, then only requested files and any missing parent descriptors are copied. Existing parent descriptors are left alone; incidental object descriptors exclude fields, record types, and other child definitions. Selecting a folder retrieves its descriptor, not every item inside it. Explicit whole-object retrieval and Retrieve Manifest keep their requested full scope.
+
 Every retrieval or permission sync immediately shows a spinning status-bar indicator and an activity message above the metadata tree, including queued operations. Completion or failure stays visible after the operation ends, even for fast cached downloads. Click the status indicator or run **Show Retrieval Activity** to see the timestamped operation history.
 
 - **Add / Remove from Manifest**, **Clear / Show Manifest Selections**, **Preview Manifest**, **Write Manifest to File**, and the persisted status bar count remain available.
