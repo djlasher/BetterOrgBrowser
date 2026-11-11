@@ -4,7 +4,12 @@ Session-based development history for BetterOrgBrowser.
 
 Use versions instead of dates. Keep this to one entry per work session.
 
-## v0.0.7 (unreleased) - Keep Child Retrieval Scoped
+## v0.0.8 (unreleased) - Permission Set indentation
+
+- Infer outer and nested indentation from the local XML instead of introducing four spaces during section regrouping. Preserve the margin of the following section and LF/CRLF conventions.
+- Added full-file comparisons for insertion, update, sorting, and repeat sync on 1,850 multiline permissions, using tabs/CRLF and two spaces/LF.
+
+## v0.0.7 (development build) - Keep Child Retrieval Scoped
 
 - Added isolated staging for foldered metadata, folders themselves, and object-child metadata that previously used direct CLI source retrieval. Allowlist exact requested source paths and missing parent descriptors before copying.
 - Preserve existing parent files. Strip decomposed child sections from incidental object descriptors and never copy sibling files returned by the CLI.

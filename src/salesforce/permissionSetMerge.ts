@@ -33,14 +33,31 @@ function value(block: string, section: string, key: string): string {
 export function findXmlBlockByChildValue(xml: string, section: string, key: string, name: string): string | undefined {
     return spans(xml).entries.find(entry => entry.tag === section && value(entry.xml, section, key) === name)?.xml;
 }
+function lineIndent(xml: string, at: number): string | undefined {
+    const indent = xml.slice(xml.lastIndexOf('\n', at - 1) + 1, at);
+    return /^[ \t]*$/.test(indent) ? indent : undefined;
+}
+function common(values: (string | undefined)[], fallback: string): string {
+    const counts = new Map<string, number>();
+    for (const value of values) { if (value !== undefined) { counts.set(value, (counts.get(value) ?? 0) + 1); } }
+    return [...counts].sort((a, b) => b[1] - a[1])[0]?.[0] ?? fallback;
+}
 export function mergeXmlBlockByChildValue(local: string, remote: string, section: string, key: string, name: string): string {
     const parsed = parseXml(`<PermissionSet>${remote}</PermissionSet>`, 'PermissionSet');
     if (Object.keys(parsed).length !== 1 || value(remote, section, key) !== name) { throw new Error('Remote permission entry does not match the requested key.'); }
     const layout = spans(local);
     const eol = local.includes('\r\n') ? '\r\n' : '\n';
-    let block = new XMLBuilder({ format: true, indentBy: '    ' }).build({ [section]: parsed[section] }).trim() as string;
+    // A previous sync may already have changed opening-tag margins. Closing
+    // tags of multiline entries retain the original local indentation.
+    const margins = layout.entries.map(entry => /\n([ \t]*)<\/[\w:.-]+>$/.exec(entry.xml)?.[1] ?? lineIndent(local, entry.start));
+    const outer = common(margins, '    ');
+    const step = common(layout.entries.map(entry => {
+        const indent = /^[^\n]*\n([ \t]*)<[\w:.-]+/.exec(entry.xml)?.[1];
+        return indent?.startsWith(outer) && indent.length > outer.length ? indent.slice(outer.length) : undefined;
+    }), outer || '    ');
+    let block = new XMLBuilder({ format: true, indentBy: step }).build({ [section]: parsed[section] }).trim() as string;
     if (layout.prefix) { block = block.replace(/<(\/?)([\w.-]+)/g, `<$1${layout.prefix}$2`); }
-    block = block.replace(/\n/g, `${eol}    `);
+    block = block.replace(/\n/g, `${eol}${outer}`);
     const same = layout.entries.filter(entry => entry.tag === section);
     const keyed = same.map(entry => ({ name: value(entry.xml, section, key), block: entry.xml }));
     if (new Set(keyed.map(entry => entry.name)).size !== keyed.length) {
@@ -67,10 +84,12 @@ export function mergeXmlBlockByChildValue(local: string, remote: string, section
     }
     remaining += local.slice(cursor);
     const before = remaining.slice(0, insertion).replace(/\s*$/, '');
-    const after = remaining.slice(insertion).replace(/^\s*/, '');
-    const closeTag = after.startsWith(`</${layout.prefix}PermissionSet`);
-    const result = before + eol + '    ' + sorted.map(entry => entry.block).join(eol + '    ')
-        + eol + (closeTag ? '' : '    ') + after;
+    const tail = remaining.slice(insertion);
+    const after = tail.trimStart();
+    const nextMargin = lineIndent(remaining, insertion + tail.length - after.length)
+        ?? (after.startsWith(`</${layout.prefix}PermissionSet`) ? '' : outer);
+    const result = before + eol + outer + sorted.map(entry => entry.block).join(eol + outer)
+        + eol + nextMargin + after;
     return compactTopLevelGaps(result, eol);
 }
 
@@ -84,7 +103,7 @@ function compactTopLevelGaps(xml: string, eol: string): string {
         const end = layout.entries[i + 1]?.start ?? layout.close;
         const gap = xml.slice(start, end);
         if (/^\s*$/.test(gap) && /\n[ \t\r]*\n/.test(gap)) {
-            result = result.slice(0, start) + eol + (i + 1 < layout.entries.length ? '    ' : '') + result.slice(end);
+            result = result.slice(0, start) + eol + gap.slice(gap.lastIndexOf('\n') + 1) + result.slice(end);
         }
     }
     return result;
