@@ -38,3 +38,27 @@ test('object permission resync also repairs section order without importing remo
     assert.ok(fixed.indexOf('<object>Account')<fixed.indexOf('<object>Contact'));
     assert.ok(fixed.indexOf('<object>Contact')<fixed.indexOf('<tabSettings>'));
 });
+
+for (const [indent, eol] of [['\t', '\r\n'], ['  ', '\n']]) test('large Permission Set keeps exact local indentation: '+JSON.stringify(indent),()=>{
+    const name=i=>'Case.Field_'+String(i).padStart(5,'0')+'__c';
+    const entry=(i, readable)=>[
+        indent+'<fieldPermissions>',
+        indent.repeat(2)+'<editable>false</editable>',
+        indent.repeat(2)+'<field>'+name(i)+'</field>',
+        indent.repeat(2)+'<readable>'+readable+'</readable>',
+        indent+'</fieldPermissions>'
+    ].join(eol);
+    const names=Array.from({length:1850},(_,i)=>i);
+    const build=entries=>['<PermissionSet>',indent+'<label>Local</label>',...entries,
+        indent+'<description>First', '   intentional whitespace', '', 'Last</description>',
+        indent+'<!-- untouched -->','</PermissionSet>',''].join(eol);
+    const entries=names.map(i=>entry(i,false));
+    const moved=entries.shift().replace(indent+'<fieldPermissions>','    <fieldPermissions>');
+    const local=build([...entries,moved]);
+    const expected=build(names.map(i=>entry(i,i===925)));
+    assert.ok(local.split(eol).length>9000);
+    const fixed=mergeFieldPermissionBlock(local,field(name(925)),name(925));
+    assert.equal(fixed,expected);
+    assert.equal(mergeFieldPermissionBlock(build(names.filter(i=>i!==925).map(i=>entry(i,false))),field(name(925)),name(925)),expected);
+    assert.equal(mergeFieldPermissionBlock(fixed,field(name(925)),name(925)),expected);
+});

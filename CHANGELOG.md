@@ -3,7 +3,13 @@
 User-facing changes are collected under Unreleased until a release is published.
 Development builds may already carry the planned version number.
 
-## Unreleased — planned 0.0.7
+## Unreleased - planned 0.0.8
+
+### 2026-11-11
+
+- Permission Set sync follows local tab or space indentation when inserting, updating, and alphabetizing permission entries. Blank-line cleanup preserves the indentation of the following section.
+
+## 0.0.7 - previous development build
 
 ### 2026-10-23
 
